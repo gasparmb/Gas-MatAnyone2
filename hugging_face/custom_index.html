@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MatAnyone 2 — Gaspar Matheron</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: 'Futura', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #080808;
+        color: #fff;
+    }
+
+    /* ── HEADER ── */
+    .app-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 32px;
+        height: 72px;
+        background: rgba(8,8,8,0.97);
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        position: sticky;
+        top: 0;
+        z-index: 20;
+    }
+    .header-title { font-size: 13px; letter-spacing: 4px; color: #444; text-transform: uppercase; }
+
+    /* ── LAYOUT ── */
+    .app-body {
+        height: calc(100vh - 72px - 43px);
+        display: flex;
+        gap: 24px;
+        align-items: stretch;
+        padding: 20px 32px 0;
+        max-width: 1400px;
+        margin: 0 auto;
+        width: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+    .app-body > * { margin-bottom: 30px; }
+
+    /* ── CARDS ── */
+    .card {
+        display: flex;
+        flex-direction: column;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        padding: 18px 20px;
+    }
+    .card-title {
+        font-size: 9px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: #555;
+        margin-bottom: 14px;
+        flex-shrink: 0;
+    }
+
+    /* ── LEFT COLUMN ── */
+    #left-column { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden; min-height: 0; }
+    #left-column .card { flex-shrink: 0; }
+    #left-column .card.grow { flex: 1; overflow-y: auto; min-height: 0; }
+    #mask-controls { flex-shrink: 0; }
+    #mask-controls .controls-row { margin-bottom: 0; }
+    #mask-controls .btn { padding: 7px 12px; font-size: 8px; letter-spacing: 1.5px; margin-bottom: 0; }
+    #mask-controls .mask-list { margin-top: 10px; }
+    #mask-controls #btn-remove-masks { margin-top: 8px; padding: 7px 12px; font-size: 8px; letter-spacing: 1.5px; margin-bottom: 0; }
+
+    /* ── STEP 1: Upload ── */
+    .step-upload { }
+
+    .drop-zone {
+        border: 1px dashed rgba(255,255,255,0.15);
+        border-radius: 12px;
+        padding: 36px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color .2s, background .2s;
+        margin-bottom: 16px;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+        border-color: rgba(255,255,255,0.4);
+        background: rgba(255,255,255,0.02);
+    }
+    .drop-icon { font-size: 26px; opacity: 0.4; margin-bottom: 10px; }
+    .drop-text { font-size: 10px; color: #666; letter-spacing: 1px; line-height: 1.6; }
+    .drop-text strong { color: rgba(255,255,255,0.6); }
+    #file-input { display: none; }
+
+    /* Upload spinner */
+    .drop-zone.loading { pointer-events: none; }
+    .drop-zone.loading .drop-icon { display: none; }
+    .drop-zone.loading .drop-text { display: none; }
+    .drop-zone .spinner-wrap { display: none; flex-direction: column; align-items: center; gap: 12px; }
+    .drop-zone.loading .spinner-wrap { display: flex; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.1); border-top-color: rgba(255,255,255,0.6); border-radius: 50%; animation: spin .7s linear infinite; }
+    .spinner-label { font-size: 9px; color: #555; letter-spacing: 2px; text-transform: uppercase; }
+
+    /* Canvas click overlay */
+    .canvas-wrap { position: relative; }
+    .canvas-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.35); border-radius: 8px; align-items: center; justify-content: center; z-index: 10; }
+    .canvas-overlay.active { display: flex; }
+    .canvas-overlay .spinner { width: 20px; height: 20px; }
+
+    .video-info {
+        font-size: 9px;
+        color: #555;
+        letter-spacing: 1px;
+        line-height: 2;
+        padding: 12px 0;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        display: none;
+    }
+
+    /* ── STEP 2: Annotation ── */
+    .step-annotate { flex: 1; min-width: 0; overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
+
+    .controls-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+
+    .frame-slider-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+    }
+    .frame-slider-wrap label { font-size: 9px; color: #555; letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; }
+    input[type="range"] {
+        flex: 1;
+        -webkit-appearance: none;
+        height: 3px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 2px;
+        outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px; height: 14px;
+        border-radius: 50%;
+        background: #fff;
+        cursor: pointer;
+    }
+    .frame-num { font-size: 9px; color: #444; flex-shrink: 0; width: 50px; text-align: right; }
+
+    /* Click mode toggle */
+    .toggle-group { display: flex; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; }
+    .toggle-btn {
+        padding: 7px 14px;
+        font-size: 8px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        background: none;
+        border: none;
+        color: #555;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all .15s;
+    }
+    .toggle-btn.active { background: rgba(255,255,255,0.1); color: #fff; }
+    .toggle-btn:not(:last-child) { border-right: 1px solid rgba(255,255,255,0.1); }
+
+    /* Canvas area */
+    .canvas-wrap {
+        position: relative;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #000;
+        cursor: crosshair;
+        line-height: 0;
+    }
+    .canvas-wrap img#frame-img {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+    .canvas-wrap canvas#click-canvas {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+    }
+    #canvas-container { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+    .canvas-placeholder {
+        aspect-ratio: 16/9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.02);
+        border-radius: 10px;
+        border: 1px dashed rgba(255,255,255,0.08);
+        max-height: 100%;
+    }
+    .placeholder-text { font-size: 10px; color: #333; letter-spacing: 2px; text-transform: uppercase; }
+
+    /* Mask list */
+    .mask-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .mask-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
+        font-size: 8px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.7);
+        cursor: pointer;
+        transition: all .15s;
+    }
+    .mask-chip.selected { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); color: #fff; }
+    .mask-chip .chip-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── STEP 3: Run ── */
+    .step-run { width: 260px; flex-shrink: 0; overflow-y: auto; min-height: 0; }
+    .step-run .run-actions-wrap { margin-top: 16px; }
+
+    .param-group { margin-bottom: 20px; }
+    .param-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 8px;
+    }
+    .param-label span:first-child { font-size: 9px; color: #555; letter-spacing: 1px; text-transform: uppercase; }
+    .param-value { font-size: 9px; color: #444; }
+
+    /* Buttons */
+    .btn {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        cursor: pointer;
+        font-family: inherit;
+        transition: opacity .2s, background .2s;
+        margin-bottom: 8px;
+    }
+    .btn-primary { background: #fff; color: #080808; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-secondary {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: rgba(255,255,255,0.6);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .btn-danger {
+        background: rgba(255,60,60,0.08);
+        border: 1px solid rgba(255,60,60,0.2);
+        color: rgba(255,120,120,0.8);
+    }
+    .btn-danger:hover { background: rgba(255,60,60,0.15); }
+
+    /* Progress */
+    .progress-wrap {
+        height: 3px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 2px;
+        margin-bottom: 16px;
+        display: none;
+    }
+    .progress-bar { height: 100%; background: #fff; border-radius: 2px; transition: width .4s; width: 0%; }
+
+    /* Result videos */
+    .result-section { display: none; margin-top: 24px; }
+    .result-row { display: flex; gap: 16px; }
+    .result-col { flex: 1; min-width: 0; }
+    .result-label {
+        font-size: 9px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #555;
+        margin-bottom: 8px;
+    }
+    .result-video {
+        width: 100%;
+        border-radius: 8px;
+        background: #000;
+        display: block;
+        margin-bottom: 12px;
+    }
+    .btn-download {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        background: rgba(255,255,255,0.04);
+        color: rgba(255,255,255,0.6);
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all .2s;
+        margin-bottom: 8px;
+    }
+    .btn-download:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+    /* Batch results grid */
+    #batch-result-section { max-width:1400px; margin:0 auto; padding:24px 32px 48px; display:none; }
+    .batch-results-header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:20px; }
+    .batch-results-title { font-size:9px; letter-spacing:3px; color:#555; text-transform:uppercase; }
+    .batch-result-item { margin-bottom:32px; }
+    .batch-result-item-title { font-size:9px; letter-spacing:2px; color:#555; text-transform:uppercase; margin-bottom:12px; }
+    .batch-result-dl { display:block; padding:10px; text-align:center; font-size:9px; letter-spacing:1px; color:#888; background:#0a0a0a; border:1px solid #222; border-radius:4px; text-transform:uppercase; transition:all .15s; cursor:pointer; margin-top:8px; width:100%; }
+    .batch-result-dl:hover { background:#1a1a1a; color:#fff; border-color:#444; }
+
+    /* Status message */
+    .status-msg {
+        font-size: 9px;
+        color: #555;
+        letter-spacing: 1px;
+        text-align: center;
+        margin-bottom: 12px;
+        min-height: 14px;
+    }
+    .status-msg.error { color: rgba(255,100,100,0.8); }
+    .status-msg.success { color: rgba(100,255,150,0.8); }
+
+    /* Divider */
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 16px 0; }
+
+    /* ── TABS ── */
+    .tab-bar {
+        display: flex;
+        gap: 0;
+        padding: 0 32px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        background: rgba(8,8,8,0.97);
+    }
+    .tab-btn {
+        padding: 14px 24px;
+        font-size: 9px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: #444;
+        cursor: pointer;
+        font-family: inherit;
+        transition: color .15s, border-color .15s;
+        margin-bottom: -1px;
+    }
+    .tab-btn.active { color: #fff; border-bottom-color: #fff; }
+    .tab-btn:hover:not(.active) { color: #888; }
+
+    /* ── BATCH LIST PANEL ── */
+    .batch-list-panel { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0; }
+    .batch-drop-mini {
+        border: 1px dashed rgba(255,255,255,0.12);
+        border-radius: 10px;
+        padding: 16px;
+        text-align: center;
+        cursor: pointer;
+        font-size: 9px;
+        color: #444;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        transition: border-color .2s, color .2s;
+        margin-bottom: 14px;
+    }
+    .batch-drop-mini:hover { border-color: rgba(255,255,255,0.3); color: #888; }
+    .batch-drop-mini.drag-over { border-color: rgba(255,255,255,0.4); color: #aaa; }
+    .batch-video-list { display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto; max-height: 420px; margin-bottom: 14px; }
+    .batch-video-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: background .15s, border-color .15s;
+    }
+    .batch-video-item:hover { background: rgba(255,255,255,0.04); }
+    .batch-video-item.active { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+    .batch-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .batch-status-dot.uploaded { background: #444; }
+    .batch-status-dot.masked   { background: #e5a50a; }
+    .batch-status-dot.queued   { background: #2ec27e; }
+    .batch-status-dot.running  { background: #e5a50a; animation: pulse 1s infinite; }
+    .batch-status-dot.done     { background: #2ec27e; }
+    .batch-status-dot.error    { background: #e04e4e; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .batch-video-name-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .batch-video-name { font-size: 10px; color: #bbb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .batch-video-progress-bar { height: 2px; background: #222; border-radius: 1px; overflow: hidden; }
+    .batch-video-progress-fill { height: 100%; background: #e5a50a; border-radius: 1px; transition: width .4s; }
+    .batch-video-progress-label { font-size: 9px; color: #666; letter-spacing: .5px; }
+    .batch-video-status { font-size: 8px; letter-spacing: 1px; color: #444; white-space: nowrap; }
+    .batch-video-remove { background: none; border: none; color: #333; cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; transition: color .15s; }
+    .batch-video-remove:hover { color: rgba(255,80,80,0.8); }
+
+    /* Chip colors */
+    .chip-c2 { background: #3a7bd5; }
+    .chip-c3 { background: #e04e4e; }
+    .chip-c4 { background: #2ec27e; }
+    .chip-c5 { background: #e5a50a; }
+
+    /* Batch queue */
+    .batch-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 10px;
+    }
+    .batch-item-name { flex: 1; font-size: 10px; color: #ccc; letter-spacing: .5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .batch-item-meta { font-size: 9px; color: #444; letter-spacing: 1px; white-space: nowrap; }
+    .batch-badge {
+        font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase;
+        padding: 3px 8px; border-radius: 4px; white-space: nowrap;
+    }
+    .batch-badge.pending  { background: rgba(255,255,255,0.06); color: #555; }
+    .batch-badge.running  { background: rgba(255,200,80,0.12);  color: rgba(255,200,80,0.8); }
+    .batch-badge.done     { background: rgba(80,255,140,0.1);   color: rgba(80,255,140,0.8); }
+    .batch-badge.error    { background: rgba(255,80,80,0.1);    color: rgba(255,120,120,0.8); }
+    .batch-item-remove {
+        background: none; border: none; color: #444; cursor: pointer;
+        font-size: 14px; padding: 0 4px; line-height: 1; font-family: inherit;
+        transition: color .15s;
+    }
+    .batch-item-remove:hover { color: rgba(255,100,100,0.8); }
+    .batch-progress { height: 2px; background: rgba(255,200,80,0.3); border-radius: 1px; margin-top: 6px; }
+    .batch-progress-bar { height: 100%; background: rgba(255,200,80,0.8); border-radius: 1px; transition: width .4s; }
+
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header class="app-header">
+    <span class="header-title">Gaspar's MatAnyone 2</span>
+</header>
+
+<!-- ── TABS ── -->
+<nav class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('single')">Vidéo unique</button>
+    <button class="tab-btn" onclick="switchTab('batch')">Batch</button>
+</nav>
+
+<!-- ── BODY ── -->
+<div class="app-body">
+
+<!-- LEFT COLUMN: upload/batch panels + mask controls -->
+<div id="left-column">
+
+    <!-- STEP 1: Upload (single mode) -->
+    <div class="card step-upload grow" id="panel-single-upload">
+        <div class="card-title">01 — Upload</div>
+
+        <div class="param-group" style="margin-bottom:16px">
+            <div class="param-label" style="margin-bottom:8px"><span>Résolution</span></div>
+            <select id="resolution-select-single" onchange="setResolution(this.value)"
+                    style="width:100%;background:#111;color:#ccc;border:1px solid #333;border-radius:4px;padding:6px 8px;font-size:11px;font-family:inherit;outline:none;cursor:pointer;letter-spacing:.5px">
+                <option value="original">Original</option>
+                <option value="1152">1152p</option>
+                <option value="1080" selected>1080p</option>
+                <option value="720">720p</option>
+                <option value="540">540p</option>
+                <option value="480">480p</option>
+            </select>
+        </div>
+
+        <div class="drop-zone" id="drop-zone">
+            <div class="drop-icon">⬆</div>
+            <div class="drop-text">
+                <strong>Choisir une vidéo</strong><br>
+                ou glisser-déposer ici<br>
+                MP4, MOV, AVI, MKV
+            </div>
+            <div class="spinner-wrap">
+                <div class="spinner"></div>
+                <div class="spinner-label">Chargement…</div>
+            </div>
+        </div>
+        <input type="file" id="file-input" accept="video/*">
+
+        <div class="video-info" id="video-info">
+            <div id="info-name"></div>
+            <div id="info-fps"></div>
+            <div id="info-frames"></div>
+            <div id="info-size"></div>
+        </div>
+
+        <div class="status-msg" id="upload-status"></div>
+
+        <button class="btn btn-secondary" id="btn-restart" style="display:none">
+            ↺ Nouvelle vidéo
+        </button>
+    </div>
+
+    <!-- BATCH: Video list panel (batch mode) -->
+    <div class="card batch-list-panel grow" id="panel-batch-list" style="display:none">
+        <div class="card-title">Batch</div>
+
+        <div class="param-group" style="margin-bottom:12px">
+            <div class="param-label" style="margin-bottom:8px"><span>Résolution</span></div>
+            <select id="resolution-select-batch" onchange="setResolution(this.value)"
+                    style="width:100%;background:#111;color:#ccc;border:1px solid #333;border-radius:4px;padding:6px 8px;font-size:11px;font-family:inherit;outline:none;cursor:pointer;letter-spacing:.5px">
+                <option value="original">Original</option>
+                <option value="1152">1152p</option>
+                <option value="1080" selected>1080p</option>
+                <option value="720">720p</option>
+                <option value="540">540p</option>
+                <option value="480">480p</option>
+            </select>
+        </div>
+
+        <div class="batch-drop-mini" id="batch-drop-mini">
+            + Ajouter des vidéos
+        </div>
+        <input type="file" id="batch-file-input" accept="video/*" multiple style="display:none">
+
+        <div class="batch-video-list" id="batch-video-list">
+            <div style="font-size:9px;color:#333;letter-spacing:1px;text-align:center;padding:20px 0">
+                Aucune vidéo
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Mask controls (shown when video loaded) -->
+    <div class="card" id="mask-controls" style="display:none">
+        <div class="card-title">Masques</div>
+        <div class="controls-row">
+            <button class="btn btn-secondary" style="width:auto" onclick="clearClicks()">Effacer clics</button>
+            <button class="btn btn-primary" style="width:auto;flex:1" onclick="addMask()">+ Ajouter masque</button>
+        </div>
+        <div class="mask-list" id="mask-list"></div>
+        <button class="btn btn-danger" id="btn-remove-masks" style="display:none" onclick="removeMasks()">
+            Supprimer tous les masques
+        </button>
+    </div>
+
+</div><!-- end #left-column -->
+
+    <!-- STEP 2: Annotation -->
+    <div class="card step-annotate">
+        <div class="card-title">02 — Sélection du sujet</div>
+
+        <!-- Controls -->
+        <div class="controls-row" id="annotation-controls" style="display:none">
+            <div class="frame-slider-wrap">
+                <label>Frame</label>
+                <input type="range" id="frame-slider" min="0" max="100" value="0" step="1">
+                <span class="frame-num" id="frame-num-label">1 / —</span>
+            </div>
+            <div class="toggle-group">
+                <button class="toggle-btn active" id="btn-positive" onclick="setMode(true)">+ Positif</button>
+                <button class="toggle-btn" id="btn-negative" onclick="setMode(false)">− Négatif</button>
+            </div>
+        </div>
+
+        <!-- Frame display -->
+        <div id="canvas-container">
+            <div class="canvas-placeholder" id="canvas-placeholder">
+                <span class="placeholder-text">Chargez une vidéo</span>
+            </div>
+            <div class="canvas-wrap" id="canvas-wrap" style="display:none">
+                <img id="frame-img" src="" alt="Frame">
+                <canvas id="click-canvas"></canvas>
+                <div class="canvas-overlay" id="canvas-overlay">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- STEP 3: Run -->
+    <div class="card step-run">
+        <div class="card-title">03 — Traitement</div>
+
+        <div class="param-group">
+            <div class="param-label">
+                <span>Erode Kernel</span>
+                <span class="param-value" id="erode-val">10</span>
+            </div>
+            <input type="range" id="erode-slider" min="0" max="30" value="10" step="1"
+                   oninput="document.getElementById('erode-val').textContent=this.value">
+        </div>
+
+        <div class="param-group">
+            <div class="param-label">
+                <span>Dilate Kernel</span>
+                <span class="param-value" id="dilate-val">10</span>
+            </div>
+            <input type="range" id="dilate-slider" min="0" max="30" value="10" step="1"
+                   oninput="document.getElementById('dilate-val').textContent=this.value">
+        </div>
+
+        <div class="param-group">
+            <div class="param-label">
+                <span>Mémoire de travail</span>
+            </div>
+            <select id="mem-frames-select" onchange="selectedMemFrames=parseInt(this.value)"
+                    style="width:100%;background:#111;color:#ccc;border:1px solid #333;border-radius:4px;padding:6px 8px;font-size:11px;font-family:inherit;outline:none;cursor:pointer;letter-spacing:.5px">
+                <option value="2">2 frames — rapide</option>
+                <option value="5" selected>5 frames — équilibré</option>
+                <option value="10">10 frames — précis</option>
+            </select>
+        </div>
+
+        <hr class="divider">
+
+        <div class="run-actions-wrap">
+            <div class="status-msg" id="run-status"></div>
+            <div class="progress-wrap" id="progress-wrap">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div id="progress-detail" style="display:none; font-size:9px; color:#555; letter-spacing:1px; margin-top:6px; text-transform:uppercase;"></div>
+
+            <!-- Single mode actions -->
+            <div id="single-run-actions" style="margin-top:20px">
+                <button class="btn btn-primary" id="btn-run" disabled onclick="runMatting()">
+                    Lancer le matting
+                </button>
+            </div>
+
+            <!-- Batch mode actions -->
+            <div id="batch-run-actions" style="display:none; margin-top:20px">
+                <button class="btn btn-secondary" id="btn-add-batch" disabled onclick="addToBatch()">
+                    + Ajouter au batch
+                </button>
+                <button class="btn btn-primary" id="btn-run-batch" disabled onclick="runBatch()">
+                    Lancer le batch
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- Batch results — full width below interface -->
+<div id="batch-result-section">
+    <hr class="divider" style="margin-bottom:24px">
+    <div class="batch-results-header">
+        <span class="batch-results-title">Résultats du batch</span>
+        <button class="btn-download" style="width:auto;padding:8px 20px" onclick="downloadAllBatch()">⬇ Tout télécharger</button>
+    </div>
+    <div id="batch-results-grid"></div>
+</div>
+
+<!-- Results — full width below everything -->
+<div class="result-section" id="result-section" style="max-width:1200px; margin:0 auto; padding:0 24px 40px;">
+    <hr class="divider" id="result-divider">
+    <div class="result-row">
+        <div class="result-col">
+            <div class="result-label">Foreground</div>
+            <video class="result-video" id="result-fg" controls></video>
+            <button class="btn-download" id="dl-fg" onclick="">⬇ Télécharger Foreground</button>
+        </div>
+        <div class="result-col">
+            <div class="result-label">Alpha Matte</div>
+            <video class="result-video" id="result-alpha" controls></video>
+            <button class="btn-download" id="dl-alpha" onclick="">⬇ Télécharger Alpha</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let sessionId = null;
+let currentVideoName = '';
+let totalFrames = 0;
+let isPositiveMode = true;
+let selectedMasks = [];
+let pollInterval = null;
+let chipColors = ['chip-c2','chip-c3','chip-c4','chip-c5'];
+let selectedResolution = '1080';
+let selectedMemFrames = 5;
+let currentMode = 'single'; // 'single' | 'batch'
+
+// Batch state
+// Each item: {session_id, video_name, status:'uploaded'|'masked'|'queued'|'running'|'done'|'error',
+//             selected_masks, erode, dilate, max_mem_frames, job_id, fg, alpha}
+let batchVideos = [];
+let batchActiveIndex = -1;
+let batchPollInterval = null;
+
+
+// ── Tab switching ────────────────────────────────────────────────────────────
+
+function switchTab(tab) {
+    currentMode = tab;
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', (i === 0 && tab === 'single') || (i === 1 && tab === 'batch'));
+    });
+    document.getElementById('panel-single-upload').style.display = tab === 'single' ? '' : 'none';
+    document.getElementById('panel-batch-list').style.display  = tab === 'batch'  ? '' : 'none';
+    document.getElementById('single-run-actions').style.display = tab === 'single' ? '' : 'none';
+    document.getElementById('batch-run-actions').style.display  = tab === 'batch'  ? '' : 'none';
+    // In batch mode, show annotation if a video is active
+    if (tab === 'batch' && batchActiveIndex >= 0) {
+        const v = batchVideos[batchActiveIndex];
+        if (v) _loadBatchVideoIntoCanvas(v, batchActiveIndex);
+    }
+}
+
+function setResolution(value) {
+    selectedResolution = value;
+    // Sync both dropdowns
+    ['resolution-select-single', 'resolution-select-batch'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+    });
+}
+
+// ── Upload ──────────────────────────────────────────────────────────────────
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadFile(file);
+});
+fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) uploadFile(fileInput.files[0]);
+});
+
+async function uploadFile(file) {
+    setUploadStatus('', '');
+    dropZone.classList.add('loading');
+
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('max_size', selectedResolution);
+    try {
+        const res = await fetch('/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Upload failed');
+
+        sessionId = data.session_id;
+        currentVideoName = data.video_name;
+        totalFrames = data.total_frames;
+
+        // Update video info
+        document.getElementById('info-name').textContent = '↳ ' + data.video_name;
+        document.getElementById('info-fps').textContent = 'FPS : ' + Math.round(data.fps);
+        document.getElementById('info-frames').textContent = 'Frames : ' + data.total_frames;
+        const resizeLabel = selectedResolution !== 'original' ? ' (redimensionné)' : '';
+        document.getElementById('info-size').textContent = 'Résolution : ' + data.image_w + '×' + data.image_h + resizeLabel;
+        document.getElementById('video-info').style.display = 'block';
+
+        // Setup frame slider
+        const slider = document.getElementById('frame-slider');
+        slider.max = totalFrames - 1;
+        slider.value = 0;
+        updateFrameLabel(0);
+
+        // Show annotation controls
+        document.getElementById('annotation-controls').style.display = 'flex';
+        document.getElementById('mask-controls').style.display = 'block';
+
+        // Show frame
+        showFrame(data.frame);
+
+        // Enable run / batch buttons
+        document.getElementById('btn-run').disabled = false;
+        document.getElementById('btn-add-batch').disabled = false;
+        if (currentMode === 'single') document.getElementById('btn-restart').style.display = 'block';
+
+        setUploadStatus('Prêt — cliquez sur la frame pour sélectionner le sujet.', '');
+    } catch(e) {
+        setUploadStatus('Erreur : ' + e.message, 'error');
+    } finally {
+        dropZone.classList.remove('loading');
+    }
+}
+
+// ── Frame display ───────────────────────────────────────────────────────────
+
+function showFrame(b64) {
+    const img = document.getElementById('frame-img');
+    const placeholder = document.getElementById('canvas-placeholder');
+    const wrap = document.getElementById('canvas-wrap');
+    img.src = 'data:image/jpeg;base64,' + b64;
+    placeholder.style.display = 'none';
+    wrap.style.display = 'block';
+}
+
+function updateFrameLabel(val) {
+    document.getElementById('frame-num-label').textContent = (parseInt(val)+1) + ' / ' + (totalFrames || '—');
+}
+
+// Frame slider
+document.getElementById('frame-slider').addEventListener('input', async function() {
+    updateFrameLabel(this.value);
+    if (!sessionId) return;
+    const res = await fetch('/select-frame', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ session_id: sessionId, frame_index: parseInt(this.value) })
+    });
+    const data = await res.json();
+    showFrame(data.frame);
+});
+
+// ── Canvas click ────────────────────────────────────────────────────────────
+
+document.getElementById('canvas-wrap').addEventListener('click', async function(e) {
+    if (!sessionId) return;
+    const img = document.getElementById('frame-img');
+    const rect = img.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
+    const overlay = document.getElementById('canvas-overlay');
+    overlay.classList.add('active');
+    try {
+        const res = await fetch('/sam-click', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ session_id: sessionId, x_norm: x, y_norm: y, is_positive: isPositiveMode })
+        });
+        const data = await res.json();
+        showFrame(data.frame);
+    } finally {
+        overlay.classList.remove('active');
+    }
+});
+
+// ── Click mode ──────────────────────────────────────────────────────────────
+
+function setMode(positive) {
+    isPositiveMode = positive;
+    document.getElementById('btn-positive').classList.toggle('active', positive);
+    document.getElementById('btn-negative').classList.toggle('active', !positive);
+    document.getElementById('canvas-wrap').style.cursor = positive ? 'crosshair' : 'cell';
+}
+
+// ── Mask management ─────────────────────────────────────────────────────────
+
+async function addMask() {
+    if (!sessionId) return;
+    const res = await fetch('/add-mask', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ session_id: sessionId })
+    });
+    const data = await res.json();
+    showFrame(data.frame);
+    renderMaskList(data.mask_names);
+}
+
+async function clearClicks() {
+    if (!sessionId) return;
+    const res = await fetch('/clear-clicks', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ session_id: sessionId })
+    });
+    const data = await res.json();
+    showFrame(data.frame);
+}
+
+async function removeMasks() {
+    if (!sessionId) return;
+    const res = await fetch('/remove-masks', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ session_id: sessionId })
+    });
+    const data = await res.json();
+    showFrame(data.frame);
+    renderMaskList([]);
+    selectedMasks = [];
+}
+
+function renderMaskList(names) {
+    const list = document.getElementById('mask-list');
+    const removeBtn = document.getElementById('btn-remove-masks');
+    list.innerHTML = '';
+    selectedMasks = [...names]; // all selected by default
+
+    names.forEach((name, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'mask-chip selected';
+        chip.dataset.name = name;
+        chip.innerHTML = `<div class="chip-dot ${chipColors[i % chipColors.length]}"></div>${name}`;
+        chip.addEventListener('click', () => {
+            chip.classList.toggle('selected');
+            if (chip.classList.contains('selected')) {
+                selectedMasks.push(name);
+            } else {
+                selectedMasks = selectedMasks.filter(n => n !== name);
+            }
+        });
+        list.appendChild(chip);
+    });
+
+    removeBtn.style.display = names.length > 0 ? 'block' : 'none';
+}
+
+// ── Run matting ──────────────────────────────────────────────────────────────
+
+async function runMatting() {
+    if (!sessionId) return;
+    const btn = document.getElementById('btn-run');
+    btn.disabled = true;
+    setRunStatus('Démarrage…', '');
+    showProgress(0);
+
+    const res = await fetch('/run', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+            session_id: sessionId,
+            erode: parseInt(document.getElementById('erode-slider').value),
+            dilate: parseInt(document.getElementById('dilate-slider').value),
+            selected_masks: selectedMasks,
+            max_mem_frames: selectedMemFrames,
+        })
+    });
+    const data = await res.json();
+    if (!data.job_id) {
+        setRunStatus('Erreur au démarrage.', 'error');
+        btn.disabled = false;
+        return;
+    }
+    pollJob(data.job_id, btn);
+}
+
+function pollJob(jobId, btn) {
+    clearInterval(pollInterval);
+    pollInterval = setInterval(async () => {
+        const res = await fetch('/status/' + jobId);
+        const data = await res.json();
+
+        if (data.status === 'running') {
+            showProgress(data.progress || 0);
+            const pct = data.progress || 0;
+            const phase = data.phase || '';
+            const frame = data.frame || 0;
+            const total = data.total || 0;
+            let detail = '';
+            if (phase === 'backward' && total > 0) detail = `◀ Backward — ${frame} / ${total} frames`;
+            else if (phase === 'warmup' && total > 0) detail = `Warmup — ${frame} / ${total} frames`;
+            else if (phase === 'inference' && total > 0) detail = `▶ Forward — ${frame} / ${total} frames`;
+            setRunStatus(`Traitement en cours… ${pct}%`, '');
+            const det = document.getElementById('progress-detail');
+            if (detail) { det.textContent = detail; det.style.display = 'block'; }
+            else { det.style.display = 'none'; }
+        } else if (data.status === 'done') {
+            clearInterval(pollInterval);
+            showProgress(100);
+            setRunStatus('Terminé !', 'success');
+            btn.disabled = false;
+            showResults(data.fg, data.alpha);
+        } else if (data.status === 'error') {
+            clearInterval(pollInterval);
+            hideProgress();
+            setRunStatus('Erreur : ' + data.error, 'error');
+            btn.disabled = false;
+            console.error(data.trace);
+        }
+    }, 1000);
+}
+
+function showResults(fg, alpha) {
+    document.getElementById('result-section').style.display = 'block';
+    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const fgUrl = '/result/' + fg;
+    const alUrl = '/result/' + alpha;
+
+    document.getElementById('result-fg').src = fgUrl;
+    document.getElementById('result-alpha').src = alUrl;
+
+    const base = currentVideoName.replace(/\.[^.]+$/, '');
+    const dlFg = document.getElementById('dl-fg');
+    dlFg.onclick = () => downloadResult(fg, base + '_fg.mp4');
+
+    const dlAl = document.getElementById('dl-alpha');
+    dlAl.onclick = () => downloadResult(alpha, base + '_alpha.mp4');
+}
+
+// ── Restart ─────────────────────────────────────────────────────────────────
+
+document.getElementById('btn-restart').addEventListener('click', () => {
+    if (currentMode !== 'single') return;
+    sessionId = null;
+    currentVideoName = '';
+    totalFrames = 0;
+    selectedMasks = [];
+    clearInterval(pollInterval);
+
+    document.getElementById('canvas-placeholder').style.display = 'flex';
+    document.getElementById('canvas-wrap').style.display = 'none';
+    document.getElementById('frame-img').src = '';
+    document.getElementById('video-info').style.display = 'none';
+    document.getElementById('annotation-controls').style.display = 'none';
+    document.getElementById('mask-controls').style.display = 'none';
+    document.getElementById('btn-run').disabled = true;
+    document.getElementById('btn-add-batch').disabled = true;
+    document.getElementById('btn-restart').style.display = 'none';
+    document.getElementById('result-section').style.display = 'none';
+    renderMaskList([]);
+    hideProgress();
+    setUploadStatus('', '');
+    setRunStatus('', '');
+
+    dropZone.classList.remove('loading');
+    fileInput.value = '';
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function setUploadStatus(msg, cls) {
+    const el = document.getElementById('upload-status');
+    el.textContent = msg;
+    el.className = 'status-msg' + (cls ? ' ' + cls : '');
+}
+
+function setRunStatus(msg, cls) {
+    const el = document.getElementById('run-status');
+    el.textContent = msg;
+    el.className = 'status-msg' + (cls ? ' ' + cls : '');
+}
+
+function showProgress(pct) {
+    document.getElementById('progress-wrap').style.display = 'block';
+    document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+function hideProgress() {
+    document.getElementById('progress-wrap').style.display = 'none';
+    document.getElementById('progress-bar').style.width = '0%';
+    document.getElementById('progress-detail').style.display = 'none';
+}
+
+// ── Batch ─────────────────────────────────────────────────────────────────
+
+// Mini drop zone for batch uploads
+const batchDropMini = document.getElementById('batch-drop-mini');
+const batchFileInput = document.getElementById('batch-file-input');
+
+batchDropMini.addEventListener('click', () => batchFileInput.click());
+batchDropMini.addEventListener('dragover', e => { e.preventDefault(); batchDropMini.classList.add('drag-over'); });
+batchDropMini.addEventListener('dragleave', () => batchDropMini.classList.remove('drag-over'));
+batchDropMini.addEventListener('drop', e => {
+    e.preventDefault();
+    batchDropMini.classList.remove('drag-over');
+    uploadBatchFiles(e.dataTransfer.files);
+});
+batchFileInput.addEventListener('change', () => {
+    if (batchFileInput.files.length) uploadBatchFiles(batchFileInput.files);
+    batchFileInput.value = '';
+});
+
+async function uploadBatchFiles(fileList) {
+    for (const file of fileList) {
+        const placeholder = { video_name: file.name, status: 'uploading', session_id: null,
+                               selected_masks: [], erode: 10, dilate: 10, max_mem_frames: 5 };
+        batchVideos.push(placeholder);
+        renderBatchVideoList();
+
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('max_size', selectedResolution);
+        try {
+            const res = await fetch('/upload', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Upload failed');
+            placeholder.session_id = data.session_id;
+            placeholder.video_name = data.video_name;
+            placeholder.total_frames = data.total_frames;
+            placeholder.fps = data.fps;
+            placeholder.status = 'uploaded';
+        } catch(e) {
+            placeholder.status = 'error';
+            placeholder.error = e.message;
+        }
+        renderBatchVideoList();
+    }
+}
+
+async function selectBatchVideo(index) {
+    batchActiveIndex = index;
+    const v = batchVideos[index];
+    if (!v || !v.session_id) return;
+    await _loadBatchVideoIntoCanvas(v, index);
+    renderBatchVideoList();
+}
+
+async function _loadBatchVideoIntoCanvas(v, index) {
+    try {
+        const res = await fetch('/session-info/' + v.session_id);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+
+        sessionId = v.session_id;
+        currentVideoName = v.video_name;
+        totalFrames = data.total_frames;
+
+        const slider = document.getElementById('frame-slider');
+        slider.max = data.total_frames - 1;
+        slider.value = data.current_frame;
+        updateFrameLabel(data.current_frame);
+
+        document.getElementById('annotation-controls').style.display = 'flex';
+        document.getElementById('mask-controls').style.display = 'block';
+        showFrame(data.frame);
+
+        selectedMasks = [...v.selected_masks];
+        renderMaskList(data.mask_names);
+        data.mask_names.forEach(name => {
+            const chip = document.querySelector(`.mask-chip[data-name="${name}"]`);
+            if (chip && !v.selected_masks.includes(name)) chip.classList.remove('selected');
+        });
+
+        document.getElementById('btn-add-batch').disabled = false;
+        document.getElementById('btn-run').disabled = false;
+    } catch(e) {
+        console.error('[Batch] Erreur chargement vidéo:', e.message);
+        // Show error state in the list
+        if (batchVideos[index]) batchVideos[index]._loadError = e.message;
+        renderBatchVideoList();
+    }
+}
+
+// Download helper — uses pywebview API if available, falls back to fetch+blob
+async function downloadResult(filename, displayName) {
+    if (window.pywebview && window.pywebview.api) {
+        const r = await window.pywebview.api.download_result(filename, displayName);
+        if (r && r.ok) showToast(`Enregistré : ${r.name}`);
+        else if (r && !r.cancelled) showToast('Erreur : ' + (r.error || 'inconnue'), true);
+    } else {
+        // Browser fallback: fetch → blob → link click
+        const resp = await fetch('/result/' + filename);
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = displayName || filename;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 500);
+    }
+}
+
+function showToast(msg, isError = false) {
+    let t = document.getElementById('dl-toast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'dl-toast';
+        t.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:10px 16px;border-radius:6px;font-size:11px;letter-spacing:.5px;z-index:9999;transition:opacity .3s;pointer-events:none';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.background = isError ? '#4e1010' : '#103020';
+    t.style.color = isError ? '#f88' : '#8f8';
+    t.style.border = `1px solid ${isError ? '#8b2020' : '#2a6040'}`;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 3000);
+}
+
+function renderBatchResults() {
+    const section = document.getElementById('batch-result-section');
+    const grid = document.getElementById('batch-results-grid');
+    const done = batchVideos.filter(v => v.status === 'done' && v.fg);
+    if (done.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    grid.innerHTML = done.map((v, i) => {
+        const baseName = v.video_name.replace(/\.[^.]+$/, '');
+        const divider = i > 0 ? '<hr class="divider">' : '';
+        return `${divider}
+        <div class="batch-result-item">
+            <div class="batch-result-item-title">${v.video_name}</div>
+            <div class="result-row">
+                <div class="result-col">
+                    <div class="result-label">Foreground</div>
+                    <video class="result-video" src="/result/${v.fg}" controls></video>
+                    <button class="batch-result-dl" onclick="downloadResult('${v.fg}', '${baseName}_fg.mp4')">⬇ Télécharger Foreground</button>
+                </div>
+                <div class="result-col">
+                    <div class="result-label">Alpha Matte</div>
+                    <video class="result-video" src="/result/${v.alpha}" controls></video>
+                    <button class="batch-result-dl" onclick="downloadResult('${v.alpha}', '${baseName}_alpha.mp4')">⬇ Télécharger Alpha</button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function downloadAllBatch() {
+    const done = batchVideos.filter(v => v.status === 'done' && v.fg);
+    for (const v of done) {
+        const base = v.video_name.replace(/\.[^.]+$/, '');
+        await downloadResult(v.fg, base + '_fg.mp4');
+        await downloadResult(v.alpha, base + '_alpha.mp4');
+    }
+}
+
+function renderBatchVideoList() {
+    const list = document.getElementById('batch-video-list');
+    const hasQueued = batchVideos.some(v => v.status === 'queued');
+    const runBatchBtn = document.getElementById('btn-run-batch');
+    if (runBatchBtn) runBatchBtn.disabled = !hasQueued;
+
+    if (batchVideos.length === 0) {
+        list.innerHTML = '<div style="font-size:9px;color:#333;letter-spacing:1px;text-align:center;padding:20px 0">Aucune vidéo</div>';
+        return;
+    }
+    list.innerHTML = '';
+    const isBatchRunning = batchVideos.some(v => v.status === 'running');
+
+    batchVideos.forEach((v, i) => {
+        const item = document.createElement('div');
+        item.className = 'batch-video-item' + (i === batchActiveIndex ? ' active' : '');
+        const statusLabel = {
+            uploading: 'Chargement…', uploaded: 'Chargé', masked: 'Masqué',
+            queued: 'Prêt', running: 'Traitement…', done: 'Terminé', error: 'Erreur',
+        }[v.status] || v.status;
+        const pct = v.progress || 0;
+        const progressHTML = v.status === 'running' ? `
+            <div class="batch-video-progress-bar"><div class="batch-video-progress-fill" style="width:${pct}%"></div></div>
+            <span class="batch-video-progress-label">${pct}%${v.phase === 'backward' ? ` · ◀ ${v.frame||0}/${v.total||0}` : v.phase === 'warmup' ? ' · warmup' : v.phase === 'inference' ? ` · ▶ ${v.frame||0}/${v.total||0}` : ''}</span>
+        ` : '';
+        item.innerHTML = `
+            <div class="batch-status-dot ${v.status}"></div>
+            <div class="batch-video-name-wrap">
+                <span class="batch-video-name" title="${v.video_name}">${v.video_name}</span>
+                ${progressHTML}
+            </div>
+            <span class="batch-video-status" title="${v._loadError || ''}">${v._loadError ? '⚠ ' : ''}${statusLabel}</span>
+            ${!isBatchRunning && v.status !== 'running' ? `<button class="batch-video-remove" onclick="removeBatchVideo(${i})" title="Retirer">×</button>` : ''}
+        `;
+        if (v.status !== 'uploading' && v.status !== 'error') {
+            item.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') return;
+                selectBatchVideo(i);
+            });
+        }
+        list.appendChild(item);
+    });
+}
+
+function removeBatchVideo(index) {
+    batchVideos.splice(index, 1);
+    if (batchActiveIndex === index) {
+        batchActiveIndex = -1;
+        sessionId = null;
+        document.getElementById('canvas-placeholder').style.display = 'flex';
+        document.getElementById('canvas-wrap').style.display = 'none';
+        document.getElementById('annotation-controls').style.display = 'none';
+        document.getElementById('mask-controls').style.display = 'none';
+        document.getElementById('btn-add-batch').disabled = true;
+    } else if (batchActiveIndex > index) {
+        batchActiveIndex--;
+    }
+    renderBatchVideoList();
+}
+
+function addToBatch() {
+    if (!sessionId || batchActiveIndex < 0) return;
+    const v = batchVideos[batchActiveIndex];
+    v.selected_masks = [...selectedMasks];
+    v.erode = parseInt(document.getElementById('erode-slider').value);
+    v.dilate = parseInt(document.getElementById('dilate-slider').value);
+    v.max_mem_frames = selectedMemFrames;
+    v.status = v.selected_masks.length > 0 ? 'queued' : 'masked';
+    renderBatchVideoList();
+    // Auto-select next unqueued video
+    const next = batchVideos.findIndex((bv, i) => i !== batchActiveIndex && (bv.status === 'uploaded' || bv.status === 'masked'));
+    if (next >= 0) selectBatchVideo(next);
+}
+
+async function runBatch() {
+    const queued = batchVideos.filter(v => v.status === 'queued');
+    if (queued.length === 0) return;
+    const runBatchBtn2 = document.getElementById('btn-run-batch');
+    if (runBatchBtn2) runBatchBtn2.disabled = true;
+
+    const items = queued.map(v => ({
+        session_id: v.session_id,
+        selected_masks: v.selected_masks,
+        erode: v.erode,
+        dilate: v.dilate,
+        max_mem_frames: v.max_mem_frames,
+    }));
+
+    const res = await fetch('/batch-run', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ items })
+    });
+    const data = await res.json();
+    if (!data.batch_id) return;
+
+    // Map job_ids back to batchVideos entries
+    queued.forEach((v, i) => { v.job_id = data.job_ids[i]; v.status = 'running'; });
+    renderBatchVideoList();
+
+    clearInterval(batchPollInterval);
+    batchPollInterval = setInterval(async () => {
+        const r = await fetch('/batch-status/' + data.batch_id);
+        const d = await r.json();
+        let allDone = true;
+        queued.forEach(v => {
+            const job = d.jobs[v.job_id] || {};
+            if (job.status === 'done') { v.status = 'done'; v.fg = job.fg; v.alpha = job.alpha; v.progress = 100; }
+            else if (job.status === 'error') { v.status = 'error'; }
+            else { allDone = false; v.status = 'running'; v.progress = job.progress || 0; v.phase = job.phase || ''; v.frame = job.frame || 0; v.total = job.total || 0; }
+        });
+        renderBatchVideoList();
+        renderBatchResults();
+        if (d.status === 'done') {
+            clearInterval(batchPollInterval);
+            document.getElementById('batch-result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 1500);
+}
+</script>
+</body>
+</html>
