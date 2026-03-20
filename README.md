@@ -1,209 +1,69 @@
-<div align="center">
-<div style="text-align: center;">
-    <img src="./assets/matanyone2_logo.png" alt="MatAnyone Logo" style="height: 52px;">
-    <h2>Scaling Video Matting via a Learned Quality Evaluator</h2>
-</div>
+# Gaspar's MatAnyone 2
 
-<div>
-    <a href='https://pq-yang.github.io/' target='_blank'>Peiqing Yang</a><sup>1</sup>&emsp;
-    <a href='https://shangchenzhou.com/' target='_blank'>Shangchen Zhou</a><sup>1†</sup>&emsp;
-    <a href="https://www.linkedin.com/in/kai-hao-794321382/" target='_blank'>Kai Hao</a><sup>1</sup>&emsp;
-    <a href="https://scholar.google.com.sg/citations?user=fMXnSGMAAAAJ&hl=en/" target='_blank'>Qingyi Tao</a><sup>2</sup>&emsp;
-</div>
-<div>
-    <sup>1</sup>S-Lab, Nanyang Technological University&emsp; 
-    <sup>2</sup>SenseTime Research, Singapore&emsp; 
-    <br>
-    <sup>†</sup>Project lead
-</div>
+A custom desktop interface for [MatAnyone 2](https://github.com/pq-yang/MatAnyone2), built on top of the original project by pq-yang. Replaces the Gradio demo with a dark web UI wrapped in a native macOS app via PyWebView.
 
+## Features
 
-<div>
-    <h4 align="center">
-        <a href="https://pq-yang.github.io/projects/MatAnyone2/" target='_blank'>
-        <img src="https://img.shields.io/badge/😈-Project%20Page-blue">
-        </a>
-        <a href="https://arxiv.org/abs/2512.11782" target='_blank'>
-        <img src="https://img.shields.io/badge/arXiv-2501.14677-b31b1b.svg">
-        </a>
-        <a href="https://www.youtube.com/watch?v=tyi8CNyjOhc&lc=Ugw1OS7z5QbW29RZCFZ4AaABAg" target='_blank'>
-        <img src="https://img.shields.io/badge/Demo%20Video-%23FF0000.svg?logo=YouTube&logoColor=white">
-        </a>
-        <a href="https://huggingface.co/spaces/PeiqingYang/MatAnyone" target='_blank'>
-        <img src="https://img.shields.io/badge/Demo-%F0%9F%A4%97%20Hugging%20Face-blue">
-        </a>
-        <img src="https://api.infinitescript.com/badgen/count?name=sczhou/MatAnyone2&ltext=Visitors&color=3977dd">
-    </h4>
-</div>
+- **Single video mode** — upload, annotate with clicks, launch matting
+- **Batch mode** — queue multiple videos, annotate each, process sequentially with a download-all button
+- **Bidirectional propagation** — annotate any frame; the model propagates forward and backward from that point
+- **Multi-mask support** — several subjects per video, color-coded chips
+- **Resolution control** — Original / 1152p / 1080p / 720p / 540p / 480p
+- **Native macOS app** — launches as a desktop window via PyWebView
+- **Native save dialog** — choose where to save results on disk
 
-<strong>MatAnyone 2 is a practical human video matting framework that preserves fine details by avoiding segmentation-like boundaries, while also shows enhanced robustness under challenging real-world conditions.</strong>
+## Installation
 
-<div style="width: 100%; text-align: center; margin:auto;">
-    <img style="width:100%" src="assets/teaser.jpg">
-</div>
+### 1. Set up the base project
 
-:movie_camera: For more visual results, go checkout our <a href="https://pq-yang.github.io/projects/MatAnyone2/" target="_blank">project page</a>
-
----
-</div>
-
-
-## 📮 Update
-- [2026.03] Add uv, CLI, and huggingface support for easy installation and usage.
-- [2026.03] Release inference codes, evaluation codes, and gradio demo.
-- [2025.12] This repo is created.
-
-
-## 🏄🏻‍♀️ TODO
-- [x] Release inference codes and gradio demo. 
-- [x] Release evaluation codes.
-- [ ] Release training codes for video matting model.
-- [ ] Release checkpoint and training codes for quality evaluator model.
-- [ ] Release real-world video matting dataset **VMReal**.
-
-
-## 🔎 Overview
-![overall_structure](assets/matanyone1vs2.jpg)
-
-## 🔧 Installation
-
-### Conda
-1. Clone Repo
-    ```bash
-    git clone https://github.com/pq-yang/MatAnyone2
-    cd MatAnyone2
-    ```
-
-2. Create Conda Environment and Install Dependencies
-    ```bash
-    # create new conda env
-    conda create -n matanyone2 python=3.10 -y
-    conda activate matanyone2
-
-    # install python dependencies
-    pip install -e .
-    # [optional] install python dependencies for gradio demo
-    pip3 install -r hugging_face/requirements.txt
-    ```
-
-### uv
-You may also install via [uv](https://docs.astral.sh/uv/):
 ```bash
-# create a new project and add matanyone2
-uv init my-matting-project && cd my-matting-project
-uv add matanyone2@git+https://github.com/pq-yang/MatAnyone2.git
+git clone https://github.com/gasparmatheron/Gas-MatAnyone2
+cd Gas-MatAnyone2
+conda create -n matanyone2 python=3.10 -y
+conda activate matanyone2
+pip install -e . --no-deps
 ```
 
-## 🔥 Inference
+The pretrained model downloads automatically on first launch. Or download manually from [MatAnyone2 releases](https://github.com/pq-yang/MatAnyone2/releases/download/v1.0.0/matanyone2.pth) into `pretrained_models/`.
 
-### Download Model
-Download our pretrained model from [MatAnyone 2](https://github.com/pq-yang/MatAnyone2/releases/download/v1.0.0/matanyone2.pth) to the `pretrained_models` folder (pretrained model can also be automatically downloaded during the first inference).
+### 2. Install interface dependencies
 
-The directory structure will be arranged as:
+```bash
+pip install fastapi uvicorn[standard] python-multipart psutil \
+    imageio==2.25.0 "imageio[ffmpeg]" ffmpeg-python \
+    opencv-python matplotlib pywebview
+pip install -r hugging_face/requirements.txt
 ```
-pretrained_models
-   |- matanyone2.pth
-```
 
-### Quick Test
-We provide some examples in the [`inputs`](./inputs) folder. **For each run, we take a video and its first-frame segmenatation mask as input.** <u>The segmenation mask could be obtained from interactive segmentation models such as [SAM2 demo](https://huggingface.co/spaces/fffiloni/SAM2-Image-Predictor)</u>. For example, the directory structure can be arranged as:
-```
-inputs
-   |- video
-      |- test-sample1          # folder containing all frames
-      |- test-sample2.mp4      # .mp4, .mov, .avi
-   |- mask
-      |- test-sample1.png      # mask for targer person(s)
-      |- test-sample2.png    
-```
-Run the following command to try it out:
+## Usage
 
-```shell
-# intput format: video folder
-python inference_matanyone2.py -i inputs/video/test-sample1 -m inputs/mask/test-sample1.png
-
-# intput format: mp4
-python inference_matanyone2.py -i inputs/video/test-sample2.mp4 -m inputs/mask/test-sample2.png
-```
-- The results will be saved in the `results` folder, including the foreground output video and the alpha output video.
-- If you want to save the results as per-frame images, you can set `--save-image`.
-- If you want to set a limit for the maximum input resolution, you can set `--max-size`, and the video will be downsampled if min(w, h) exceeds. By default, we don't set the limit.
-
-Or you may directly run via CLI command:
-```shell
-matanyone2 -i inputs/video/test-sample1 -m inputs/mask/test-sample1.png
-```
-- Run `matanyone2 --help` for a full list of options.
-
-### Python API 🤗
-You can load the model directly from Hugging Face using `from_pretrained` and run inference programmatically:
-
-```python
-from matanyone2 import MatAnyone2, InferenceCore
-
-model = MatAnyone2.from_pretrained("PeiqingYang/MatAnyone2")
-processor = InferenceCore(model, device="cuda:0")
-processor.process_video(
-    input_path="inputs/video/test-sample2.mp4",
-    mask_path="inputs/mask/test-sample2.png",
-    output_path="results",
-)
-``` 
-
-## 🎪 Interactive Demo
-To get rid of the preparation for first-frame segmentation mask, we prepare a gradio demo on [hugging face](https://huggingface.co/spaces/PeiqingYang/MatAnyone2) and could also **launch locally**. Just drop your video/image, assign the target masks with a few clicks, and get the the matting results!
-
-*We integrate MatAnyone Series in the demo. [MatAnyone 2](https://github.com/pq-yang/MatAnyone2) is the default model. You can also choose [MatAnyone](https://github.com/pq-yang/MatAnyone) as your processing model in "Model Selection".*
-
-```shell
+```bash
 cd hugging_face
-
-# install GUI dependencies
-pip3 install -r requirements.txt # FFmpeg required
-
-# launch the demo
-python app.py
+python launch.py
 ```
 
-By launching, an interactive interface will appear as follow.
+Or as a web server only:
 
-![overall_teaser](assets/teaser_demo.gif)
+```bash
+uvicorn custom_server:app --host 127.0.0.1 --port 8000
+```
 
-## 📊 Evaluation
-Please refer to the [evaluation documentation](docs/EVAL.md) for details.
+## Project structure
 
-## 🛠️ Data Pipeline
-![data_pipeline](assets/data_pipeline.jpg)
+```
+hugging_face/
+├── custom_index.html     # UI (single file, no build step)
+├── custom_server.py      # FastAPI backend
+├── launch.py             # PyWebView desktop launcher
+├── matanyone2_wrapper.py # Bidirectional matting logic
+└── tools/                # Utilities from original MatAnyone project
+```
 
+## Credits
 
-## 📑 Citation
+- **MatAnyone 2** — [pq-yang](https://github.com/pq-yang/MatAnyone2), S-Lab NTU
+- **Custom interface** — [Gaspar Matheron](https://gasparmatheron.studio)
 
-   If you find our repo useful for your research, please consider citing our paper:
+## License
 
-   ```bibtex
-  @InProceedings{yang2026matanyone2,
-      title     = {{MatAnyone 2}: Scaling Video Matting via a Learned Quality Evaluator},
-      author    = {Yang, Peiqing and Zhou, Shangchen and Hao, Kai and Tao, Qingyi},
-      booktitle = {CVPR},
-      year      = {2026}
-      }
-
-  @inProceedings{yang2025matanyone,
-      title     = {{MatAnyone}: Stable Video Matting with Consistent Memory Propagation},
-      author    = {Yang, Peiqing and Zhou, Shangchen and Zhao, Jixin and Tao, Qingyi and Loy, Chen Change},
-      booktitle = {CVPR},
-      year      = {2025}
-      }
-   ```
-
-## 📝 License
-
-This project is licensed under <a rel="license" href="./LICENSE">NTU S-Lab License 1.0</a>. Redistribution and use should follow this license.
-
-## 👏 Acknowledgement
-
-This project is built upon [MatAnyone](https://github.com/pq-yang/MatAnyone) and [Cutie](https://github.com/hkchengrex/Cutie), with matting dataset files adapted from [RVM](https://github.com/PeterL1n/RobustVideoMatting). The interactive demo is adapted from [ProPainter](https://github.com/sczhou/ProPainter), leveraging segmentation capabilities from [Segment Anything Model](https://github.com/facebookresearch/segment-anything) and [Segment Anything Model 2](https://github.com/facebookresearch/sam2). Thanks for their awesome works!
-
-## 📧 Contact
-
-If you have any questions, please feel free to reach us at `peiqingyang99@outlook.com`. 
+Based on [MatAnyone 2](https://github.com/pq-yang/MatAnyone2), licensed under [NTU S-Lab License 1.0](./LICENSE).
