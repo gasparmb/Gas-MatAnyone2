@@ -15,6 +15,7 @@ import threading
 import base64
 import io
 import json
+from datetime import datetime
 import numpy as np
 import cv2
 import psutil
@@ -47,11 +48,58 @@ import imageio
 DEVICE = str(get_device())
 BASE_DIR = os.path.dirname(__file__)
 CHECKPOINT_FOLDER = os.path.join(BASE_DIR, '..', 'pretrained_models')
-UPLOADS_DIR = os.path.join(BASE_DIR, 'uploads')
-RESULTS_DIR = os.path.join(BASE_DIR, 'results')
+
+_APP_CONFIG_PATH = os.path.join(BASE_DIR, 'flamatanyone_settings.json')
+
+def _load_app_config():
+    defaults = {
+        'uploads_dir': os.path.join(BASE_DIR, 'uploads'),
+        'results_dir': os.path.join(BASE_DIR, 'results'),
+    }
+    if os.path.exists(_APP_CONFIG_PATH):
+        try:
+            with open(_APP_CONFIG_PATH) as f:
+                defaults.update(json.load(f))
+        except Exception:
+            pass
+    return defaults
+
+def _save_app_config(cfg: dict):
+    with open(_APP_CONFIG_PATH, 'w') as f:
+        json.dump(cfg, f, indent=2)
+
+_app_config = _load_app_config()
+UPLOADS_DIR = os.path.expanduser(_app_config['uploads_dir'])
+RESULTS_DIR = os.path.expanduser(_app_config['results_dir'])
+
+_FLAME_CONFIG_PATH = os.path.expanduser('~/.flame_matanyone_config.json')
+_FLAME_DEFAULTS = {
+    'flame_inputs_dir':  '~/Documents/MatAnyone/flame_inputs',
+    'flame_outputs_dir': '~/Documents/MatAnyone/flame_outputs',
+}
+
+def get_flame_dirs():
+    """
+    Lit les chemins Flame depuis ~/.flame_matanyone_config.json (config partagée
+    avec le hook Flame). Retourne (inputs_dir, outputs_dir) résolus.
+    Priorité : config Flame > valeurs par défaut.
+    """
+    cfg = _FLAME_DEFAULTS.copy()
+    if os.path.exists(_FLAME_CONFIG_PATH):
+        try:
+            with open(_FLAME_CONFIG_PATH) as f:
+                cfg.update(json.load(f))
+        except Exception:
+            pass
+    inputs_dir  = os.path.expanduser(cfg.get('flame_inputs_dir',  _FLAME_DEFAULTS['flame_inputs_dir']))
+    outputs_dir = os.path.expanduser(cfg.get('flame_outputs_dir', _FLAME_DEFAULTS['flame_outputs_dir']))
+    os.makedirs(inputs_dir,  exist_ok=True)
+    os.makedirs(outputs_dir, exist_ok=True)
+    return inputs_dir, outputs_dir
 
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
+# Dossiers Flame créés dynamiquement via get_flame_dirs() à chaque appel
 
 SAM_URL = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
 MATANYONE2_URL = "https://github.com/pq-yang/MatAnyone2/releases/download/v1.0.0/matanyone2.pth"
@@ -60,9 +108,10 @@ MATANYONE2_URL = "https://github.com/pq-yang/MatAnyone2/releases/download/v1.0.0
 
 _sam = None
 _matanyone_model = None
-sessions: dict = {}
-jobs: dict = {}
-batches: dict = {}
+sessions: dict    = {}
+jobs: dict        = {}
+batches: dict     = {}
+flame_queue: list = []   # Sessions chargées depuis Flame, en attente d'affichage UI
 
 # ── Model helpers ─────────────────────────────────────────────────────────────
 
@@ -220,6 +269,18 @@ class RunReq(BaseModel):
 class BatchRunReq(BaseModel):
     items: List[RunReq]
 
+class FlameLoadClipReq(BaseModel):
+    clip_path: str
+    clip_name: str
+    max_size: Optional[str] = None
+
+class FlameSendResultsReq(BaseModel):
+    session_id: str
+    job_id: str
+    clip_name: Optional[str] = None
+    export_alpha: bool = True
+    export_foreground: bool = False
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -373,8 +434,19 @@ def remove_masks(req: SessionReq):
     return {'frame': frame_to_b64(sess['origin_images'][fi]), 'mask_names': []}
 
 
+@app.post("/preview-frame")
+def preview_frame(req: SelectFrameReq):
+    """Return frame image instantly — no SAM encoding. Used during slider scrub."""
+    if req.session_id not in sessions:
+        raise HTTPException(404, "Session not found")
+    sess = sessions[req.session_id]
+    idx = max(0, min(req.frame_index, len(sess['origin_images']) - 1))
+    return {'frame': frame_to_b64(sess['painted_images'][idx])}
+
+
 @app.post("/select-frame")
 def select_frame(req: SelectFrameReq):
+    """Encode frame into SAM. Called once when user releases the slider."""
     if req.session_id not in sessions:
         raise HTTPException(404, "Session not found")
     sess = sessions[req.session_id]
@@ -529,6 +601,242 @@ def get_result(filename: str):
         raise HTTPException(404, "File not found")
     return FileResponse(path, media_type='video/mp4',
                         headers={'Content-Disposition': f'attachment; filename="{filename}"'})
+
+
+# ── Flame integration endpoints ───────────────────────────────────────────────
+
+@app.post("/flame-load-clip")
+def flame_load_clip(req: FlameLoadClipReq):
+    """
+    Reçoit un chemin ProRes 422 depuis Flame et retourne immédiatement un load_id.
+    L'extraction des frames se fait en arrière-plan ; l'UI est notifiée via
+    /flame-check-queue quand c'est prêt.
+    """
+    if not os.path.exists(req.clip_path):
+        raise HTTPException(404, f"Fichier introuvable : {req.clip_path}")
+
+    load_id   = str(uuid.uuid4())
+    clip_name = req.clip_name or os.path.splitext(os.path.basename(req.clip_path))[0]
+
+    def _load():
+        try:
+            print(f"[MatAnyone/Flame] Chargement '{clip_name}' …")
+            frames, fps, audio = extract_frames(req.clip_path)
+            if not frames:
+                print(f"[MatAnyone/Flame] Aucune frame extraite de {req.clip_path}")
+                return
+
+            if req.max_size and req.max_size != 'original':
+                try:
+                    frames = resize_frames(frames, int(req.max_size))
+                except Exception as e:
+                    print(f"[MatAnyone/Flame] Resize error: {e}")
+
+            sam = get_sam()
+            sam.sam_controler.reset_image()
+            sam.sam_controler.set_image(frames[0])
+
+            h, w = frames[0].shape[:2]
+            session_id = str(uuid.uuid4())
+
+            sessions[session_id] = {
+                'video_name':          os.path.basename(req.clip_path),
+                'video_path':          req.clip_path,
+                'origin_images':       frames,
+                'painted_images':      [f.copy() for f in frames],
+                'masks':               [np.zeros((h, w), np.uint8)] * len(frames),
+                'logits':              [None] * len(frames),
+                'select_frame_number': 0,
+                'fps':                 fps,
+                'audio':               audio,
+                'click_state':         [[], []],
+                'multi_mask':          {'mask_names': [], 'masks': []},
+                'from_flame':          True,
+                'flame_clip_name':     clip_name,
+            }
+
+            flame_queue.append({
+                'session_id':   session_id,
+                'clip_name':    clip_name,
+                'video_name':   os.path.basename(req.clip_path),
+                'total_frames': len(frames),
+                'fps':          fps,
+                'image_w':      w,
+                'image_h':      h,
+            })
+            print(f"[MatAnyone/Flame] '{clip_name}' prêt — session {session_id}")
+
+        except Exception as e:
+            import traceback
+            print(f"[MatAnyone/Flame] Erreur chargement '{clip_name}': {e}")
+            traceback.print_exc()
+
+    threading.Thread(target=_load, daemon=True).start()
+    return {'load_id': load_id, 'clip_name': clip_name, 'status': 'loading'}
+
+
+@app.get("/flame-check-queue")
+def flame_check_queue():
+    """
+    Retourne les clips chargés depuis Flame en attente d'affichage dans l'UI.
+    Vide la file après retour (consommation unique).
+    """
+    items = flame_queue.copy()
+    flame_queue.clear()
+    return {'items': items}
+
+
+@app.post("/flame-send-results")
+def flame_send_results(req: FlameSendResultsReq):
+    """
+    Exporte les résultats du matting en séquences PNG pour Flame.
+    - Alpha matte  → FLAME_OUTPUTS_DIR/{clip_name}_pha/  (PNG 16-bit niveaux de gris)
+    - Foreground   → FLAME_OUTPUTS_DIR/{clip_name}_fgr/  (PNG 8-bit RGB, optionnel)
+    Écrit ensuite FLAME_OUTPUTS_DIR/notification.json pour le watcher Flame.
+    """
+    if req.session_id not in sessions:
+        raise HTTPException(404, "Session introuvable")
+    if req.job_id not in jobs:
+        raise HTTPException(404, "Job introuvable")
+
+    job = jobs[req.job_id]
+    if job.get('status') != 'done':
+        raise HTTPException(400, f"Job pas encore terminé (status: {job.get('status')})")
+
+    sess = sessions[req.session_id]
+    clip_name = (
+        req.clip_name
+        or sess.get('flame_clip_name')
+        or os.path.splitext(sess.get('video_name', 'result'))[0]
+    )
+
+    # Lire les dossiers depuis la config Flame (dynamique)
+    _, outputs_dir = get_flame_dirs()
+    pha_dir = os.path.join(outputs_dir, f"{clip_name}_pha")
+    fgr_dir = os.path.join(outputs_dir, f"{clip_name}_fgr") if req.export_foreground else None
+
+    os.makedirs(pha_dir, exist_ok=True)
+    if fgr_dir:
+        os.makedirs(fgr_dir, exist_ok=True)
+
+    # ── Export séquence alpha (PNG 16-bit niveaux de gris) ────────────────────
+    alpha_path  = os.path.join(RESULTS_DIR, job['alpha'])
+    frame_count = 0
+    cap = cv2.VideoCapture(alpha_path)
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame_count += 1
+        gray   = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray16 = (gray.astype(np.uint16)) * 257   # 8-bit → 16-bit (0-255 → 0-65535)
+        out    = os.path.join(pha_dir, f"{clip_name}_pha.{frame_count:04d}.png")
+        cv2.imwrite(out, gray16)
+    cap.release()
+
+    # ── Export séquence foreground (PNG 8-bit RGB, optionnel) ─────────────────
+    if fgr_dir and req.export_foreground:
+        fg_path = os.path.join(RESULTS_DIR, job['fg'])
+        fi = 0
+        cap = cv2.VideoCapture(fg_path)
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            fi += 1
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            out = os.path.join(fgr_dir, f"{clip_name}_fgr.{fi:04d}.png")
+            Image.fromarray(rgb).save(out)
+        cap.release()
+
+    # ── Écriture de notification.json ─────────────────────────────────────────
+    notif = {
+        'timestamp':          datetime.now().strftime('%Y%m%d_%H%M%S'),
+        'clip_name':          clip_name,
+        'alpha_folder':       f"{clip_name}_pha",
+        'foreground_folder':  f"{clip_name}_fgr" if (fgr_dir and req.export_foreground) else None,
+        'frame_count':        frame_count,
+        'fps':                sess.get('fps', 25.0),
+        'status':             'ready',
+    }
+    notif_name = f"notification_{notif['timestamp']}_{uuid.uuid4().hex[:8]}.json"
+    notif_path = os.path.join(outputs_dir, notif_name)
+    with open(notif_path, 'w') as f:
+        json.dump(notif, f, indent=2)
+
+    print(f"[MatAnyone/Flame] {frame_count} frames exportées → {pha_dir}")
+    return {
+        'ok':           True,
+        'frame_count':  frame_count,
+        'alpha_folder': f"{clip_name}_pha",
+        'clip_name':    clip_name,
+    }
+
+
+# ── Settings & Purge ─────────────────────────────────────────────────────────
+
+class SettingsReq(BaseModel):
+    uploads_dir: Optional[str] = None
+    results_dir: Optional[str] = None
+
+@app.get("/settings")
+def get_settings():
+    return {
+        'uploads_dir': UPLOADS_DIR,
+        'results_dir': RESULTS_DIR,
+    }
+
+@app.post("/settings")
+def post_settings(req: SettingsReq):
+    global UPLOADS_DIR, RESULTS_DIR, _app_config
+    changed = False
+    if req.uploads_dir:
+        path = os.path.expanduser(req.uploads_dir)
+        os.makedirs(path, exist_ok=True)
+        UPLOADS_DIR = path
+        _app_config['uploads_dir'] = req.uploads_dir
+        changed = True
+    if req.results_dir:
+        path = os.path.expanduser(req.results_dir)
+        os.makedirs(path, exist_ok=True)
+        RESULTS_DIR = path
+        _app_config['results_dir'] = req.results_dir
+        changed = True
+    if changed:
+        _save_app_config(_app_config)
+    return {'uploads_dir': UPLOADS_DIR, 'results_dir': RESULTS_DIR}
+
+class PurgeReq(BaseModel):
+    target: str   # 'uploads' | 'results'
+    period: str   # 'today' | 'week' | 'all'
+    dry_run: bool = True
+
+def _purge_dir(directory: str, period: str, dry_run: bool):
+    import time as _time
+    now = _time.time()
+    cutoffs = {'today': 86400, 'week': 604800, 'all': float('inf')}
+    max_age = cutoffs.get(period, float('inf'))
+    deleted, freed = 0, 0
+    if not os.path.isdir(directory):
+        return deleted, freed
+    for fname in os.listdir(directory):
+        fpath = os.path.join(directory, fname)
+        if not os.path.isfile(fpath):
+            continue
+        age = now - os.path.getmtime(fpath)
+        if period == 'all' or age <= max_age:
+            size = os.path.getsize(fpath)
+            if not dry_run:
+                os.remove(fpath)
+            deleted += 1
+            freed += size
+    return deleted, freed
+
+@app.post("/purge")
+def purge(req: PurgeReq):
+    directory = UPLOADS_DIR if req.target == 'uploads' else RESULTS_DIR
+    deleted, freed = _purge_dir(directory, req.period, req.dry_run)
+    return {'deleted': deleted, 'freed_bytes': freed, 'dry_run': req.dry_run}
 
 
 if __name__ == '__main__':

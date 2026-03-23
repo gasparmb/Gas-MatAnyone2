@@ -1,6 +1,8 @@
-# Gaspar's MatAnyone 2
+# Flamatanyone
 
-A custom desktop interface for [MatAnyone 2](https://github.com/pq-yang/MatAnyone2), built on top of the original project by pq-yang. Replaces the Gradio demo with a dark web UI wrapped in a native macOS app via PyWebView.
+A custom web interface for [MatAnyone 2](https://github.com/pq-yang/MatAnyone2), built on top of the original project by pq-yang. Replaces the Gradio demo with a fast dark web UI served locally via FastAPI.
+
+![Flamatanyone interface](assets/Flamatanyone.png)
 
 ## Features
 
@@ -9,54 +11,42 @@ A custom desktop interface for [MatAnyone 2](https://github.com/pq-yang/MatAnyon
 - **Bidirectional propagation** — annotate any frame; the model propagates forward and backward from that point
 - **Multi-mask support** — several subjects per video, color-coded chips
 - **Resolution control** — Original / 1152p / 1080p / 720p / 540p / 480p
-- **Native macOS app** — launches as a desktop window via PyWebView
-- **Native save dialog** — choose where to save results on disk
+- **Fast timeline scrubbing** — preview frames instantly, SAM encodes only on release
+- **Settings tab** — configure input/output folders, purge old files by date
 
 ## Installation
-
-### 1. Set up the base project
 
 ```bash
 git clone https://github.com/gasparmatheron/Gas-MatAnyone2
 cd Gas-MatAnyone2
-conda create -n matanyone2 python=3.10 -y
-conda activate matanyone2
-pip install -e . --no-deps
+bash install.sh
 ```
 
-The pretrained model downloads automatically on first launch. Or download manually from [MatAnyone2 releases](https://github.com/pq-yang/MatAnyone2/releases/download/v1.0.0/matanyone2.pth) into `pretrained_models/`.
-
-### 2. Install interface dependencies
-
-```bash
-pip install fastapi uvicorn[standard] python-multipart psutil \
-    imageio==2.25.0 "imageio[ffmpeg]" ffmpeg-python \
-    opencv-python matplotlib pywebview
-pip install -r hugging_face/requirements.txt
-```
+`install.sh` handles everything: conda env creation, PyTorch (MPS on macOS, CUDA on Linux), dependencies, and model weight download.
 
 ## Usage
 
 ```bash
-cd hugging_face
-python launch.py
+bash run.sh
 ```
 
-Or as a web server only:
+Then open [http://localhost:7860](http://localhost:7860) in your browser.
 
+Custom port:
 ```bash
-uvicorn custom_server:app --host 127.0.0.1 --port 8000
+PORT=8080 bash run.sh
 ```
 
 ## Project structure
 
 ```
 hugging_face/
-├── custom_index.html     # UI (single file, no build step)
-├── custom_server.py      # FastAPI backend
-├── launch.py             # PyWebView desktop launcher
-├── matanyone2_wrapper.py # Bidirectional matting logic
-└── tools/                # Utilities from original MatAnyone project
+├── custom_index.html       # UI (single file, no build step)
+├── custom_server.py        # FastAPI backend
+├── matanyone2_wrapper.py   # Bidirectional matting logic
+└── tools/                  # Utilities from original MatAnyone project
+install.sh                  # One-shot install script
+run.sh                      # Launch script
 ```
 
 ## Credits

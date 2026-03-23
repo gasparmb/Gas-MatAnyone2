@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MatAnyone 2 — Gaspar Matheron</title>
+<title>Flamatanyone</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -348,6 +348,35 @@
         padding: 0 32px;
         border-bottom: 1px solid rgba(255,255,255,0.06);
         background: rgba(8,8,8,0.97);
+        align-items: center;
+        justify-content: space-between;
+    }
+    .tab-bar-left { display: flex; }
+    .btn-reset {
+        font-size: 8px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        background: none;
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 4px;
+        color: rgba(255,255,255,0.4);
+        padding: 6px 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-reset:hover {
+        border-color: rgba(255,80,80,0.6);
+        color: rgba(255,100,100,0.9);
+    }
+    .purge-period-btn {
+        font-size: 8px; letter-spacing: 1px; text-transform: uppercase;
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 4px; color: rgba(255,255,255,0.4); padding: 4px 8px;
+        cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .purge-period-btn.active {
+        background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3);
+        color: rgba(255,255,255,0.85);
     }
     .tab-btn {
         padding: 14px 24px;
@@ -448,19 +477,88 @@
     .batch-progress { height: 2px; background: rgba(255,200,80,0.3); border-radius: 1px; margin-top: 6px; }
     .batch-progress-bar { height: 100%; background: rgba(255,200,80,0.8); border-radius: 1px; transition: width .4s; }
 
+    /* ── FLAME INTEGRATION ── */
+    .btn-flame {
+        display: block;
+        width: 100%;
+        padding: 11px;
+        border: none;
+        border-radius: 10px;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        cursor: pointer;
+        font-family: inherit;
+        background: linear-gradient(135deg, #b83c00, #e85a1a);
+        color: #fff;
+        transition: opacity .2s;
+        margin-top: 10px;
+    }
+    .btn-flame:hover { opacity: 0.85; }
+    .btn-flame:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .batch-result-flame {
+        display: block; padding: 8px; text-align: center; font-size: 9px;
+        letter-spacing: 1px; color: #e85a1a; background: rgba(232,90,26,0.08);
+        border: 1px solid rgba(232,90,26,0.25); border-radius: 4px;
+        text-transform: uppercase; transition: all .15s; cursor: pointer;
+        margin-top: 8px; width: 100%;
+    }
+    .batch-result-flame:hover { background: rgba(232,90,26,0.18); border-color: rgba(232,90,26,0.5); }
+
+    /* Notification Flame (clip entrant depuis Flame) */
+    .flame-notif {
+        position: fixed;
+        bottom: 72px;
+        right: 24px;
+        background: rgba(12,12,12,0.97);
+        border: 1px solid rgba(232,90,26,0.5);
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 9999;
+        min-width: 280px;
+        max-width: 360px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        animation: slideUp .25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .flame-notif-icon { font-size: 18px; color: #e85a1a; flex-shrink: 0; }
+    .flame-notif-text { flex: 1; font-size: 10px; color: #ccc; letter-spacing: .5px; }
+    .flame-notif-text strong { color: #fff; }
+    .flame-notif-btn {
+        background: #e85a1a; border: none; color: #fff; border-radius: 6px;
+        padding: 6px 12px; font-size: 9px; letter-spacing: 1.5px;
+        text-transform: uppercase; cursor: pointer; font-family: inherit;
+        white-space: nowrap; transition: opacity .15s;
+    }
+    .flame-notif-btn:hover { opacity: 0.85; }
+    .flame-notif-close {
+        background: none; border: none; color: #555; cursor: pointer;
+        font-size: 16px; padding: 0 2px; line-height: 1; transition: color .15s;
+    }
+    .flame-notif-close:hover { color: #999; }
+
 </style>
 </head>
 <body>
 
 <!-- ── HEADER ── -->
 <header class="app-header">
-    <span class="header-title">Gaspar's MatAnyone 2</span>
+    <span class="header-title">Flamatanyone</span>
 </header>
 
 <!-- ── TABS ── -->
 <nav class="tab-bar">
-    <button class="tab-btn active" onclick="switchTab('single')">Vidéo unique</button>
-    <button class="tab-btn" onclick="switchTab('batch')">Batch</button>
+    <div class="tab-bar-left">
+        <button class="tab-btn active" onclick="switchTab('single')">Vidéo unique</button>
+        <button class="tab-btn" onclick="switchTab('batch')">Batch</button>
+        <button class="tab-btn" onclick="switchTab('settings')">Réglages</button>
+    </div>
+    <button class="btn-reset" onclick="resetAll()">↺ Réinitialiser</button>
 </nav>
 
 <!-- ── BODY ── -->
@@ -657,13 +755,74 @@
 
 </div>
 
+<!-- ── SETTINGS PANEL ─────────────────────────────────────── -->
+<div id="panel-settings" style="display:none; max-width:700px; margin:32px auto; padding:0 24px 40px;">
+
+    <div class="card" style="margin-bottom:20px">
+        <div class="card-title">Dossier d'entrée (uploads)</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+            <input id="input-uploads-dir" type="text" placeholder="/chemin/vers/uploads"
+                style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+                       border-radius:6px;color:#fff;padding:8px 12px;font-size:12px;font-family:inherit">
+            <button class="btn btn-primary" style="margin:0;width:auto;padding:8px 16px;white-space:nowrap"
+                onclick="saveSettings()">Valider</button>
+        </div>
+        <div id="uploads-dir-status" style="font-size:10px;color:#555;margin-top:6px;letter-spacing:1px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+        <div class="card-title">Dossier de sortie (résultats)</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+            <input id="input-results-dir" type="text" placeholder="/chemin/vers/results"
+                style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+                       border-radius:6px;color:#fff;padding:8px 12px;font-size:12px;font-family:inherit">
+            <button class="btn btn-primary" style="margin:0;width:auto;padding:8px 16px;white-space:nowrap"
+                onclick="saveSettings()">Valider</button>
+        </div>
+        <div id="results-dir-status" style="font-size:10px;color:#555;margin-top:6px;letter-spacing:1px"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Purger les fichiers</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+
+            <!-- Uploads purge -->
+            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:16px">
+                <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#555;margin-bottom:12px">Entrées</div>
+                <div style="display:flex;gap:6px;margin-bottom:12px">
+                    <button class="purge-period-btn active" data-target="uploads" data-period="today" onclick="selectPurgePeriod(this)">Aujourd'hui</button>
+                    <button class="purge-period-btn" data-target="uploads" data-period="week" onclick="selectPurgePeriod(this)">Cette semaine</button>
+                    <button class="purge-period-btn" data-target="uploads" data-period="all" onclick="selectPurgePeriod(this)">Tout</button>
+                </div>
+                <div id="purge-uploads-preview" style="font-size:10px;color:#555;min-height:16px;margin-bottom:10px"></div>
+                <button class="btn btn-danger" style="margin:0;width:100%;padding:8px" onclick="doPurge('uploads')">Purger</button>
+            </div>
+
+            <!-- Results purge -->
+            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:16px">
+                <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#555;margin-bottom:12px">Résultats</div>
+                <div style="display:flex;gap:6px;margin-bottom:12px">
+                    <button class="purge-period-btn active" data-target="results" data-period="today" onclick="selectPurgePeriod(this)">Aujourd'hui</button>
+                    <button class="purge-period-btn" data-target="results" data-period="week" onclick="selectPurgePeriod(this)">Cette semaine</button>
+                    <button class="purge-period-btn" data-target="results" data-period="all" onclick="selectPurgePeriod(this)">Tout</button>
+                </div>
+                <div id="purge-results-preview" style="font-size:10px;color:#555;min-height:16px;margin-bottom:10px"></div>
+                <button class="btn btn-danger" style="margin:0;width:100%;padding:8px" onclick="doPurge('results')">Purger</button>
+            </div>
+
+        </div>
+    </div>
+</div>
 
 <!-- Batch results — full width below interface -->
 <div id="batch-result-section">
     <hr class="divider" style="margin-bottom:24px">
     <div class="batch-results-header">
         <span class="batch-results-title">Résultats du batch</span>
-        <button class="btn-download" style="width:auto;padding:8px 20px" onclick="downloadAllBatch()">⬇ Tout télécharger</button>
+        <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-flame" style="width:auto;padding:8px 20px;display:inline-flex;align-items:center;margin:0" onclick="sendAllToFlame()">⬥ Tout envoyer vers Flame</button>
+            <button class="btn-download" style="width:auto;padding:8px 20px;margin:0" onclick="downloadAllBatch()">⬇ Tout télécharger</button>
+        </div>
     </div>
     <div id="batch-results-grid"></div>
 </div>
@@ -682,6 +841,13 @@
             <video class="result-video" id="result-alpha" controls></video>
             <button class="btn-download" id="dl-alpha" onclick="">⬇ Télécharger Alpha</button>
         </div>
+    </div>
+    <!-- Envoyer vers Flame -->
+    <div style="max-width:400px; margin:16px auto 0;">
+        <button class="btn-flame" id="btn-send-to-flame" style="display:none" onclick="sendToFlame()">
+            ⬥ Envoyer vers Flame
+        </button>
+        <div class="status-msg" id="flame-send-status" style="margin-top:6px"></div>
     </div>
 </div>
 
@@ -705,23 +871,156 @@ let batchVideos = [];
 let batchActiveIndex = -1;
 let batchPollInterval = null;
 
+// Flame integration state
+let currentJobId    = null;
+let flameClipName   = null;
+let fromFlame       = false;
+
 
 // ── Tab switching ────────────────────────────────────────────────────────────
 
 function switchTab(tab) {
     currentMode = tab;
     document.querySelectorAll('.tab-btn').forEach((b, i) => {
-        b.classList.toggle('active', (i === 0 && tab === 'single') || (i === 1 && tab === 'batch'));
+        b.classList.toggle('active', (i === 0 && tab === 'single') || (i === 1 && tab === 'batch') || (i === 2 && tab === 'settings'));
     });
+    const isWork = tab === 'single' || tab === 'batch';
     document.getElementById('panel-single-upload').style.display = tab === 'single' ? '' : 'none';
     document.getElementById('panel-batch-list').style.display  = tab === 'batch'  ? '' : 'none';
     document.getElementById('single-run-actions').style.display = tab === 'single' ? '' : 'none';
     document.getElementById('batch-run-actions').style.display  = tab === 'batch'  ? '' : 'none';
+    document.getElementById('panel-settings').style.display = tab === 'settings' ? 'block' : 'none';
+    // Hide main app-body layout when in settings
+    document.querySelector('.app-body').style.display = isWork ? '' : 'none';
+    if (tab === 'settings') loadSettings();
     // In batch mode, show annotation if a video is active
     if (tab === 'batch' && batchActiveIndex >= 0) {
         const v = batchVideos[batchActiveIndex];
         if (v) _loadBatchVideoIntoCanvas(v, batchActiveIndex);
     }
+}
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+
+async function loadSettings() {
+    const r = await fetch('/settings');
+    const d = await r.json();
+    document.getElementById('input-uploads-dir').value = d.uploads_dir;
+    document.getElementById('input-results-dir').value  = d.results_dir;
+    refreshPurgePreview('uploads');
+    refreshPurgePreview('results');
+}
+
+async function saveSettings() {
+    const uploads_dir = document.getElementById('input-uploads-dir').value.trim();
+    const results_dir = document.getElementById('input-results-dir').value.trim();
+    const r = await fetch('/settings', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ uploads_dir: uploads_dir || null, results_dir: results_dir || null })
+    });
+    const d = await r.json();
+    document.getElementById('uploads-dir-status').textContent = '✓ ' + d.uploads_dir;
+    document.getElementById('results-dir-status').textContent = '✓ ' + d.results_dir;
+    document.getElementById('input-uploads-dir').value = d.uploads_dir;
+    document.getElementById('input-results-dir').value  = d.results_dir;
+}
+
+const _purgePeriods = { uploads: 'today', results: 'today' };
+
+function selectPurgePeriod(btn) {
+    const target = btn.dataset.target;
+    const period = btn.dataset.period;
+    _purgePeriods[target] = period;
+    document.querySelectorAll(`.purge-period-btn[data-target="${target}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    refreshPurgePreview(target);
+}
+
+async function refreshPurgePreview(target) {
+    const period = _purgePeriods[target] || 'today';
+    const r = await fetch('/purge', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ target, period, dry_run: true })
+    });
+    const d = await r.json();
+    const mb = (d.freed_bytes / 1024 / 1024).toFixed(1);
+    document.getElementById(`purge-${target}-preview`).textContent =
+        d.deleted > 0 ? `${d.deleted} fichier${d.deleted > 1 ? 's' : ''} · ${mb} Mo` : 'Aucun fichier à purger';
+}
+
+async function doPurge(target) {
+    const period = _purgePeriods[target] || 'today';
+    const label = { today: "aujourd'hui", week: 'cette semaine', all: 'tout' }[period];
+    if (!confirm(`Supprimer les fichiers ${target === 'uploads' ? "d'entrée" : 'de résultats'} — ${label} ?`)) return;
+    const r = await fetch('/purge', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ target, period, dry_run: false })
+    });
+    const d = await r.json();
+    showToast(`${d.deleted} fichier${d.deleted > 1 ? 's' : ''} supprimé${d.deleted > 1 ? 's' : ''}`);
+    refreshPurgePreview(target);
+}
+
+async function resetAll() {
+    if (!confirm('Réinitialiser complètement ? Toutes les vidéos et masques seront effacés.')) return;
+
+    // Stop any running poll
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    if (batchPollInterval) { clearInterval(batchPollInterval); batchPollInterval = null; }
+
+    // Reset state
+    sessionId = null;
+    currentVideoName = '';
+    totalFrames = 0;
+    isPositiveMode = true;
+    selectedMasks = [];
+    currentJobId = null;
+    flameClipName = null;
+    fromFlame = false;
+    batchVideos = [];
+    batchActiveIndex = -1;
+
+    // Reset canvas
+    const canvas = document.getElementById('annotation-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.width = 16; canvas.height = 9;
+
+    // Hide dynamic sections
+    document.getElementById('mask-controls').style.display = 'none';
+    document.getElementById('mask-list').innerHTML = '';
+    const btnRemove = document.getElementById('btn-remove-masks');
+    if (btnRemove) btnRemove.style.display = 'none';
+
+    // Reset timeline
+    const timeline = document.getElementById('timeline-wrap');
+    if (timeline) timeline.style.display = 'none';
+
+    // Reset canvas placeholder
+    document.getElementById('canvas-placeholder').style.display = 'flex';
+    canvas.style.display = 'none';
+
+    // Reset run sections
+    ['single-run-actions', 'batch-run-actions'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // Reset results
+    const res = document.getElementById('result-section');
+    if (res) res.style.display = 'none';
+    const batchRes = document.getElementById('batch-result-section');
+    if (batchRes) { batchRes.innerHTML = ''; batchRes.style.display = 'none'; }
+
+    // Reset batch list UI
+    renderBatchVideoList();
+
+    // Reset file input
+    const fi = document.getElementById('file-input');
+    if (fi) fi.value = '';
+
+    // Switch to single tab
+    switchTab('single');
 }
 
 function setResolution(value) {
@@ -817,8 +1116,21 @@ function updateFrameLabel(val) {
 }
 
 // Frame slider
+// During scrub: instant preview, no SAM
 document.getElementById('frame-slider').addEventListener('input', async function() {
     updateFrameLabel(this.value);
+    if (!sessionId) return;
+    const res = await fetch('/preview-frame', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ session_id: sessionId, frame_index: parseInt(this.value) })
+    });
+    const data = await res.json();
+    showFrame(data.frame);
+});
+
+// On release: encode into SAM (enables clicking)
+document.getElementById('frame-slider').addEventListener('change', async function() {
     if (!sessionId) return;
     const res = await fetch('/select-frame', {
         method: 'POST',
@@ -979,7 +1291,7 @@ function pollJob(jobId, btn) {
             showProgress(100);
             setRunStatus('Terminé !', 'success');
             btn.disabled = false;
-            showResults(data.fg, data.alpha);
+            showResults(data.fg, data.alpha, jobId);
         } else if (data.status === 'error') {
             clearInterval(pollInterval);
             hideProgress();
@@ -990,7 +1302,7 @@ function pollJob(jobId, btn) {
     }, 1000);
 }
 
-function showResults(fg, alpha) {
+function showResults(fg, alpha, jobId) {
     document.getElementById('result-section').style.display = 'block';
     document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -1006,6 +1318,16 @@ function showResults(fg, alpha) {
 
     const dlAl = document.getElementById('dl-alpha');
     dlAl.onclick = () => downloadResult(alpha, base + '_alpha.mp4');
+
+    // Activer le bouton Send to Flame
+    currentJobId = jobId;
+    const flameBtn = document.getElementById('btn-send-to-flame');
+    if (flameBtn) {
+        flameBtn.style.display = 'block';
+        flameBtn.disabled = false;
+    }
+    document.getElementById('flame-send-status').textContent = '';
+    document.getElementById('flame-send-status').className = 'status-msg';
 }
 
 // ── Restart ─────────────────────────────────────────────────────────────────
@@ -1155,23 +1477,16 @@ async function _loadBatchVideoIntoCanvas(v, index) {
     }
 }
 
-// Download helper — uses pywebview API if available, falls back to fetch+blob
+// Download helper
 async function downloadResult(filename, displayName) {
-    if (window.pywebview && window.pywebview.api) {
-        const r = await window.pywebview.api.download_result(filename, displayName);
-        if (r && r.ok) showToast(`Enregistré : ${r.name}`);
-        else if (r && !r.cancelled) showToast('Erreur : ' + (r.error || 'inconnue'), true);
-    } else {
-        // Browser fallback: fetch → blob → link click
-        const resp = await fetch('/result/' + filename);
-        const blob = await resp.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = displayName || filename;
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 500);
-    }
+    const resp = await fetch('/result/' + filename);
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = displayName || filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 500);
 }
 
 function showToast(msg, isError = false) {
@@ -1200,6 +1515,7 @@ function renderBatchResults() {
     grid.innerHTML = done.map((v, i) => {
         const baseName = v.video_name.replace(/\.[^.]+$/, '');
         const divider = i > 0 ? '<hr class="divider">' : '';
+        const batchFlameClip = v.flame_clip_name || baseName;
         return `${divider}
         <div class="batch-result-item">
             <div class="batch-result-item-title">${v.video_name}</div>
@@ -1215,6 +1531,10 @@ function renderBatchResults() {
                     <button class="batch-result-dl" onclick="downloadResult('${v.alpha}', '${baseName}_alpha.mp4')">⬇ Télécharger Alpha</button>
                 </div>
             </div>
+            <button class="batch-result-flame" onclick="sendBatchResultToFlame('${v.session_id}', '${v.job_id}', '${batchFlameClip}', this)">
+                ⬥ Envoyer vers Flame
+            </button>
+            <div class="status-msg" id="flame-batch-status-${v.job_id}" style="margin-top:4px"></div>
         </div>`;
     }).join('');
 }
@@ -1225,6 +1545,18 @@ async function downloadAllBatch() {
         const base = v.video_name.replace(/\.[^.]+$/, '');
         await downloadResult(v.fg, base + '_fg.mp4');
         await downloadResult(v.alpha, base + '_alpha.mp4');
+    }
+}
+
+async function sendAllToFlame() {
+    const done = batchVideos.filter(v => v.status === 'done' && v.session_id && v.job_id);
+    if (done.length === 0) { showToast('Aucun résultat prêt à envoyer'); return; }
+    for (const v of done) {
+        const clipName = v.flame_clip_name || v.video_name.replace(/\.[^.]+$/, '');
+        // Find the matching button in the DOM (if rendered) to disable it
+        const btnSel = `button.batch-result-flame[onclick*="${v.job_id}"]`;
+        const btn = document.querySelector(btnSel);
+        await sendBatchResultToFlame(v.session_id, v.job_id, clipName, btn);
     }
 }
 
@@ -1271,6 +1603,160 @@ function renderBatchVideoList() {
         list.appendChild(item);
     });
 }
+
+// ── Flame: envoyer résultats single ─────────────────────────────────────────
+
+async function sendToFlame() {
+    if (!currentJobId || !sessionId) return;
+    const btn = document.getElementById('btn-send-to-flame');
+    const statusEl = document.getElementById('flame-send-status');
+    btn.disabled = true;
+    statusEl.textContent = 'Export PNG en cours…';
+    statusEl.className = 'status-msg';
+
+    try {
+        const clipName = flameClipName || currentVideoName.replace(/\.[^.]+$/, '');
+        const res = await fetch('/flame-send-results', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                session_id:        sessionId,
+                job_id:            currentJobId,
+                clip_name:         clipName,
+                export_alpha:      true,
+                export_foreground: false,
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Export échoué');
+        statusEl.textContent = `✓ ${data.frame_count} frames envoyées vers Flame`;
+        statusEl.className = 'status-msg success';
+        showToast(`Alpha envoyé vers Flame (${data.frame_count} frames)`);
+    } catch(e) {
+        statusEl.textContent = 'Erreur : ' + e.message;
+        statusEl.className = 'status-msg error';
+        btn.disabled = false;
+    }
+}
+
+// ── Flame: envoyer résultats batch ───────────────────────────────────────────
+
+async function sendBatchResultToFlame(sessId, jobId, clipName, btnEl) {
+    if (btnEl) btnEl.disabled = true;
+    const statusEl = document.getElementById('flame-batch-status-' + jobId);
+    if (statusEl) { statusEl.textContent = 'Export PNG en cours…'; statusEl.className = 'status-msg'; }
+
+    try {
+        const res = await fetch('/flame-send-results', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                session_id:        sessId,
+                job_id:            jobId,
+                clip_name:         clipName,
+                export_alpha:      true,
+                export_foreground: false,
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Export échoué');
+        if (statusEl) { statusEl.textContent = `✓ ${data.frame_count} frames envoyées`; statusEl.className = 'status-msg success'; }
+        showToast(`${clipName} → Flame (${data.frame_count} frames)`);
+    } catch(e) {
+        if (statusEl) { statusEl.textContent = 'Erreur : ' + e.message; statusEl.className = 'status-msg error'; }
+        if (btnEl) btnEl.disabled = false;
+    }
+}
+
+// ── Flame: polling file d'attente ────────────────────────────────────────────
+
+async function _pollFlameQueue() {
+    try {
+        const res = await fetch('/flame-check-queue');
+        if (!res.ok) return;
+        const data = await res.json();
+        const items = data.items || [];
+        if (items.length === 0) return;
+
+        // Toujours basculer en mode batch quand des clips arrivent de Flame
+        if (currentMode !== 'batch') switchTab('batch');
+
+        for (const item of items) {
+            batchVideos.push({
+                video_name:      item.video_name,
+                session_id:      item.session_id,
+                status:          'uploaded',
+                from_flame:      true,
+                flame_clip_name: item.clip_name,
+                selected_masks:  [],
+                erode: 10, dilate: 10, max_mem_frames: 5,
+                total_frames:    item.total_frames,
+                fps:             item.fps,
+            });
+            showToast(`Flame → « ${item.clip_name} » ajouté au batch`);
+        }
+        renderBatchVideoList();
+
+        // Sélectionner automatiquement le premier clip non annoté
+        const firstNew = batchVideos.findIndex(v => v.status === 'uploaded' && v.from_flame);
+        if (firstNew >= 0) selectBatchVideo(firstNew);
+
+    } catch(e) { /* serveur non prêt, ignorer */ }
+}
+
+function _showFlameNotif(clipName, sessId, videoName) {
+    const notif = document.createElement('div');
+    notif.className = 'flame-notif';
+    notif.innerHTML = `
+        <span class="flame-notif-icon">⬥</span>
+        <span class="flame-notif-text">Flame → <strong>${clipName}</strong></span>
+        <button class="flame-notif-btn" onclick="_loadFlameSession('${sessId}','${videoName}','${clipName}',this.closest('.flame-notif'))">Charger</button>
+        <button class="flame-notif-close" onclick="this.closest('.flame-notif').remove()">×</button>
+    `;
+    document.body.appendChild(notif);
+    setTimeout(() => { if (notif.parentNode) notif.remove(); }, 15000);
+}
+
+async function _loadFlameSession(sessId, videoName, clipName, notifEl) {
+    if (notifEl) notifEl.remove();
+    try {
+        const res = await fetch('/session-info/' + sessId);
+        if (!res.ok) throw new Error('Session introuvable');
+        const data = await res.json();
+
+        sessionId        = sessId;
+        currentVideoName = videoName;
+        flameClipName    = clipName;
+        fromFlame        = true;
+        totalFrames      = data.total_frames;
+
+        document.getElementById('info-name').textContent   = '↳ ' + videoName + ' [Flame]';
+        document.getElementById('info-fps').textContent    = 'FPS : ' + Math.round(data.fps);
+        document.getElementById('info-frames').textContent = 'Frames : ' + data.total_frames;
+        document.getElementById('info-size').textContent   = 'Résolution : ' + data.image_w + '×' + data.image_h;
+        document.getElementById('video-info').style.display = 'block';
+
+        const slider = document.getElementById('frame-slider');
+        slider.max   = data.total_frames - 1;
+        slider.value = data.current_frame || 0;
+        updateFrameLabel(data.current_frame || 0);
+
+        document.getElementById('annotation-controls').style.display = 'flex';
+        document.getElementById('mask-controls').style.display = 'block';
+        document.getElementById('btn-run').disabled = false;
+        document.getElementById('btn-add-batch').disabled = false;
+        document.getElementById('btn-restart').style.display = 'block';
+
+        showFrame(data.frame);
+        renderMaskList(data.mask_names || []);
+        setUploadStatus('Clip Flame chargé — cliquez pour créer le masque.', '');
+    } catch(e) {
+        showToast('Erreur chargement Flame : ' + e.message, true);
+    }
+}
+
+// Démarrer le polling de la file Flame (3 secondes)
+setInterval(_pollFlameQueue, 3000);
 
 function removeBatchVideo(index) {
     batchVideos.splice(index, 1);
