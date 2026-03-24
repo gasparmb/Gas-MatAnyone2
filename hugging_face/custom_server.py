@@ -265,6 +265,7 @@ class RunReq(BaseModel):
     dilate: int = 10
     selected_masks: List[str] = []
     max_mem_frames: int = 5
+    split_masks: bool = False
 
 class BatchRunReq(BaseModel):
     items: List[RunReq]
@@ -459,63 +460,87 @@ def select_frame(req: SelectFrameReq):
     return {'frame': frame_to_b64(sess['painted_images'][idx])}
 
 
+def _run_single_mask(sess, jid, vname, mask_tmpl, req, suffix, progress_range):
+    """Run matting for a single mask template. Returns (fg_basename, alpha_basename)."""
+    fi = sess['select_frame_number']
+    all_frames = sess['origin_images']
+    model = get_matanyone()
+    processor = InferenceCore(model, cfg=model.cfg)
+    processor.memory.max_mem_frames = max(1, req.max_mem_frames - 1)
+    sid = req.session_id
+
+    p_start, p_end = progress_range
+
+    def on_progress(current, total, phase):
+        pct = p_start + int((current / max(total, 1)) * (p_end - p_start))
+        jobs[jid].update({'progress': pct, 'phase': phase, 'frame': current, 'total': total})
+
+    fg_temp = os.path.join(RESULTS_DIR, f"{sid}_{vname}{suffix}_fg_temp.mp4")
+    al_path = os.path.join(RESULTS_DIR, f"{sid}_{vname}{suffix}_alpha.mp4")
+
+    matanyone2_fn(
+        processor, all_frames, mask_tmpl * 255,
+        r_erode=req.erode, r_dilate=req.dilate,
+        progress_callback=on_progress,
+        fg_path=fg_temp, alpha_path=al_path, fps=sess['fps'],
+        start_frame=fi,
+    )
+
+    fg_final = os.path.join(RESULTS_DIR, f"{sid}_{vname}{suffix}_fg.mp4")
+    if sess.get('audio') and os.path.exists(sess['audio']):
+        fg_out = add_audio_to_video(fg_temp, sess['audio'], fg_final)
+        if fg_out == fg_final and os.path.exists(fg_temp) and fg_temp != fg_final:
+            try:
+                os.remove(fg_temp)
+            except Exception:
+                pass
+    else:
+        import shutil
+        shutil.move(fg_temp, fg_final)
+        fg_out = fg_final
+
+    return os.path.basename(fg_out), os.path.basename(al_path)
+
+
 def do_matting(req: RunReq, jid: str):
     """Run matting for one session. Updates jobs[jid] in place."""
     try:
         sid = req.session_id
         sess = sessions[sid]
-        fi = sess['select_frame_number']
-        all_frames = sess['origin_images']   # ALL frames — wrapper handles bidirectional split
-
-        tmpl = build_template_mask(sess, req.selected_masks)
-        if len(np.unique(tmpl)) == 1:
-            tmpl[0][0] = 1
+        vname = os.path.splitext(sess['video_name'])[0]
 
         jobs[jid]['progress'] = 15
-        model = get_matanyone()
-        processor = InferenceCore(model, cfg=model.cfg)
-        processor.memory.max_mem_frames = max(1, req.max_mem_frames - 1)
-        jobs[jid]['progress'] = 25
-        jobs[jid]['phase'] = 'warmup'
-        jobs[jid]['frame'] = 0
-        jobs[jid]['total'] = 0
 
-        def on_progress(current, total, phase):
-            # backward and forward together fill 35→85%
-            pct = 35 + int((current / max(total, 1)) * 50)
-            jobs[jid].update({'progress': pct, 'phase': phase, 'frame': current, 'total': total})
+        multi = sess['multi_mask']['masks']
+        names = sess['multi_mask']['mask_names']
+        selected = req.selected_masks or names[:]
 
-        vname = os.path.splitext(sess['video_name'])[0]
-        fg_temp = os.path.join(RESULTS_DIR, f"{sid}_{vname}_fg_temp.mp4")
-        al_path = os.path.join(RESULTS_DIR, f"{sid}_{vname}_alpha.mp4")
-
-        matanyone2_fn(
-            processor, all_frames, tmpl * 255,
-            r_erode=req.erode, r_dilate=req.dilate,
-            progress_callback=on_progress,
-            fg_path=fg_temp, alpha_path=al_path, fps=sess['fps'],
-            start_frame=fi,
-        )
-        jobs[jid]['progress'] = 85
-
-        fg_final = os.path.join(RESULTS_DIR, f"{sid}_{vname}_fg.mp4")
-        if sess.get('audio') and os.path.exists(sess['audio']):
-            fg_out = add_audio_to_video(fg_temp, sess['audio'], fg_final)
-            if fg_out == fg_final and os.path.exists(fg_temp) and fg_temp != fg_final:
-                try:
-                    os.remove(fg_temp)
-                except Exception:
-                    pass
+        if req.split_masks and len(selected) >= 1:
+            # One pass per mask
+            results = []
+            for i, mask_name in enumerate(sorted(selected)):
+                idx = int(mask_name.split('_')[1]) - 1
+                tmpl = multi[idx].astype(np.uint8)
+                if len(np.unique(tmpl)) == 1:
+                    tmpl[0][0] = 1
+                jobs[jid]['current_mask'] = mask_name
+                p_start = 15 + int(i / len(selected) * 80)
+                p_end = 15 + int((i + 1) / len(selected) * 80)
+                fg_b, al_b = _run_single_mask(sess, jid, vname, tmpl, req, f"_{mask_name}", (p_start, p_end))
+                results.append({'mask_name': mask_name, 'fg': fg_b, 'alpha': al_b})
+            jobs[jid].update({'status': 'done', 'progress': 100, 'results': results})
         else:
-            import shutil
-            shutil.move(fg_temp, fg_final)
-            fg_out = fg_final
+            # Combined — original behaviour
+            tmpl = build_template_mask(sess, req.selected_masks)
+            if len(np.unique(tmpl)) == 1:
+                tmpl[0][0] = 1
+            jobs[jid]['progress'] = 25
+            jobs[jid]['phase'] = 'warmup'
+            jobs[jid]['frame'] = 0
+            jobs[jid]['total'] = 0
+            fg_b, al_b = _run_single_mask(sess, jid, vname, tmpl, req, '', (25, 85))
+            jobs[jid].update({'status': 'done', 'progress': 100, 'fg': fg_b, 'alpha': al_b})
 
-        jobs[jid].update({
-            'status': 'done', 'progress': 100,
-            'fg': os.path.basename(fg_out),
-            'alpha': os.path.basename(al_path),
-        })
     except Exception as e:
         import traceback
         jobs[jid].update({'status': 'error', 'error': str(e), 'trace': traceback.format_exc()})
@@ -712,65 +737,67 @@ def flame_send_results(req: FlameSendResultsReq):
 
     # Lire les dossiers depuis la config Flame (dynamique)
     _, outputs_dir = get_flame_dirs()
-    pha_dir = os.path.join(outputs_dir, f"{clip_name}_pha")
-    fgr_dir = os.path.join(outputs_dir, f"{clip_name}_fgr") if req.export_foreground else None
 
-    os.makedirs(pha_dir, exist_ok=True)
-    if fgr_dir:
-        os.makedirs(fgr_dir, exist_ok=True)
+    def export_one(alpha_file, fg_file, name_prefix):
+        """Export one alpha+fg pair to Flame PNG sequences. Returns frame_count."""
+        _pha_dir = os.path.join(outputs_dir, f"{name_prefix}_pha")
+        _fgr_dir = os.path.join(outputs_dir, f"{name_prefix}_fgr") if req.export_foreground else None
+        os.makedirs(_pha_dir, exist_ok=True)
+        if _fgr_dir:
+            os.makedirs(_fgr_dir, exist_ok=True)
 
-    # ── Export séquence alpha (PNG 16-bit niveaux de gris) ────────────────────
-    alpha_path  = os.path.join(RESULTS_DIR, job['alpha'])
-    frame_count = 0
-    cap = cv2.VideoCapture(alpha_path)
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        frame_count += 1
-        gray   = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray16 = (gray.astype(np.uint16)) * 257   # 8-bit → 16-bit (0-255 → 0-65535)
-        out    = os.path.join(pha_dir, f"{clip_name}_pha.{frame_count:04d}.png")
-        cv2.imwrite(out, gray16)
-    cap.release()
-
-    # ── Export séquence foreground (PNG 8-bit RGB, optionnel) ─────────────────
-    if fgr_dir and req.export_foreground:
-        fg_path = os.path.join(RESULTS_DIR, job['fg'])
-        fi = 0
-        cap = cv2.VideoCapture(fg_path)
+        fc = 0
+        cap = cv2.VideoCapture(os.path.join(RESULTS_DIR, alpha_file))
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
-            fi += 1
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            out = os.path.join(fgr_dir, f"{clip_name}_fgr.{fi:04d}.png")
-            Image.fromarray(rgb).save(out)
+            fc += 1
+            gray16 = (cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.uint16)) * 257
+            cv2.imwrite(os.path.join(_pha_dir, f"{name_prefix}_pha.{fc:04d}.png"), gray16)
         cap.release()
 
-    # ── Écriture de notification.json ─────────────────────────────────────────
-    notif = {
-        'timestamp':          datetime.now().strftime('%Y%m%d_%H%M%S'),
-        'clip_name':          clip_name,
-        'alpha_folder':       f"{clip_name}_pha",
-        'foreground_folder':  f"{clip_name}_fgr" if (fgr_dir and req.export_foreground) else None,
-        'frame_count':        frame_count,
-        'fps':                sess.get('fps', 25.0),
-        'status':             'ready',
-    }
-    notif_name = f"notification_{notif['timestamp']}_{uuid.uuid4().hex[:8]}.json"
-    notif_path = os.path.join(outputs_dir, notif_name)
-    with open(notif_path, 'w') as f:
-        json.dump(notif, f, indent=2)
+        if _fgr_dir and fg_file:
+            fi = 0
+            cap = cv2.VideoCapture(os.path.join(RESULTS_DIR, fg_file))
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                fi += 1
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                Image.fromarray(rgb).save(os.path.join(_fgr_dir, f"{name_prefix}_fgr.{fi:04d}.png"))
+            cap.release()
 
-    print(f"[MatAnyone/Flame] {frame_count} frames exportées → {pha_dir}")
-    return {
-        'ok':           True,
-        'frame_count':  frame_count,
-        'alpha_folder': f"{clip_name}_pha",
-        'clip_name':    clip_name,
-    }
+        return fc, f"{name_prefix}_pha", f"{name_prefix}_fgr" if _fgr_dir else None
+
+    # ── Export ────────────────────────────────────────────────────────────────
+    results_list = job.get('results')
+    if results_list:
+        # Split mode — one folder per mask
+        frame_count = 0
+        exported = []
+        for r in results_list:
+            prefix = f"{clip_name}_{r['mask_name']}"
+            fc, pha_folder, fgr_folder = export_one(r['alpha'], r.get('fg'), prefix)
+            frame_count = fc
+            exported.append({'mask_name': r['mask_name'], 'alpha_folder': pha_folder, 'foreground_folder': fgr_folder})
+            ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+            notif = {'timestamp': ts, 'clip_name': prefix, 'alpha_folder': pha_folder,
+                     'foreground_folder': fgr_folder, 'frame_count': fc, 'fps': sess.get('fps', 25.0), 'status': 'ready'}
+            with open(os.path.join(outputs_dir, f"notification_{ts}_{uuid.uuid4().hex[:8]}.json"), 'w') as f:
+                json.dump(notif, f, indent=2)
+        print(f"[MatAnyone/Flame] {len(exported)} masques exportés → {outputs_dir}")
+        return {'ok': True, 'frame_count': frame_count, 'exported': exported, 'clip_name': clip_name}
+    else:
+        frame_count, pha_folder, fgr_folder = export_one(job['alpha'], job.get('fg'), clip_name)
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        notif = {'timestamp': ts, 'clip_name': clip_name, 'alpha_folder': pha_folder,
+                 'foreground_folder': fgr_folder, 'frame_count': frame_count, 'fps': sess.get('fps', 25.0), 'status': 'ready'}
+        with open(os.path.join(outputs_dir, f"notification_{ts}_{uuid.uuid4().hex[:8]}.json"), 'w') as f:
+            json.dump(notif, f, indent=2)
+        print(f"[MatAnyone/Flame] {frame_count} frames exportées → {pha_dir}")
+        return {'ok': True, 'frame_count': frame_count, 'alpha_folder': pha_folder, 'clip_name': clip_name}
 
 
 # ── Settings & Purge ─────────────────────────────────────────────────────────

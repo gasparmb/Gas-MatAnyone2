@@ -554,11 +554,11 @@
 <!-- ── TABS ── -->
 <nav class="tab-bar">
     <div class="tab-bar-left">
-        <button class="tab-btn active" onclick="switchTab('single')">Vidéo unique</button>
+        <button class="tab-btn active" onclick="switchTab('single')">Single video</button>
         <button class="tab-btn" onclick="switchTab('batch')">Batch</button>
-        <button class="tab-btn" onclick="switchTab('settings')">Réglages</button>
+        <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
     </div>
-    <button class="btn-reset" onclick="resetAll()">↺ Réinitialiser</button>
+    <button class="btn-reset" onclick="resetAll()">↺ Reset</button>
 </nav>
 
 <!-- ── BODY ── -->
@@ -572,7 +572,7 @@
         <div class="card-title">01 — Upload</div>
 
         <div class="param-group" style="margin-bottom:16px">
-            <div class="param-label" style="margin-bottom:8px"><span>Résolution</span></div>
+            <div class="param-label" style="margin-bottom:8px"><span>Resolution</span></div>
             <select id="resolution-select-single" onchange="setResolution(this.value)"
                     style="width:100%;background:#111;color:#ccc;border:1px solid #333;border-radius:4px;padding:6px 8px;font-size:11px;font-family:inherit;outline:none;cursor:pointer;letter-spacing:.5px">
                 <option value="original">Original</option>
@@ -587,13 +587,13 @@
         <div class="drop-zone" id="drop-zone">
             <div class="drop-icon">⬆</div>
             <div class="drop-text">
-                <strong>Choisir une vidéo</strong><br>
-                ou glisser-déposer ici<br>
+                <strong>Choose a video</strong><br>
+                or drag & drop here<br>
                 MP4, MOV, AVI, MKV
             </div>
             <div class="spinner-wrap">
                 <div class="spinner"></div>
-                <div class="spinner-label">Chargement…</div>
+                <div class="spinner-label">Loading…</div>
             </div>
         </div>
         <input type="file" id="file-input" accept="video/*">
@@ -608,7 +608,7 @@
         <div class="status-msg" id="upload-status"></div>
 
         <button class="btn btn-secondary" id="btn-restart" style="display:none">
-            ↺ Nouvelle vidéo
+            ↺ New video
         </button>
     </div>
 
@@ -617,7 +617,7 @@
         <div class="card-title">Batch</div>
 
         <div class="param-group" style="margin-bottom:12px">
-            <div class="param-label" style="margin-bottom:8px"><span>Résolution</span></div>
+            <div class="param-label" style="margin-bottom:8px"><span>Resolution</span></div>
             <select id="resolution-select-batch" onchange="setResolution(this.value)"
                     style="width:100%;background:#111;color:#ccc;border:1px solid #333;border-radius:4px;padding:6px 8px;font-size:11px;font-family:inherit;outline:none;cursor:pointer;letter-spacing:.5px">
                 <option value="original">Original</option>
@@ -630,13 +630,13 @@
         </div>
 
         <div class="batch-drop-mini" id="batch-drop-mini">
-            + Ajouter des vidéos
+            + Add videos
         </div>
         <input type="file" id="batch-file-input" accept="video/*" multiple style="display:none">
 
         <div class="batch-video-list" id="batch-video-list">
             <div style="font-size:9px;color:#333;letter-spacing:1px;text-align:center;padding:20px 0">
-                Aucune vidéo
+                No video
             </div>
         </div>
 
@@ -644,14 +644,14 @@
 
     <!-- Mask controls (shown when video loaded) -->
     <div class="card" id="mask-controls" style="display:none">
-        <div class="card-title">Masques</div>
+        <div class="card-title">Masks</div>
         <div class="controls-row">
-            <button class="btn btn-secondary" style="width:auto" onclick="clearClicks()">Effacer clics</button>
-            <button class="btn btn-primary" style="width:auto;flex:1" onclick="addMask()">+ Ajouter masque</button>
+            <button class="btn btn-secondary" style="width:auto" onclick="clearClicks()">Clear clicks</button>
+            <button class="btn btn-primary" style="width:auto;flex:1" onclick="addMask()">+ Add mask</button>
         </div>
         <div class="mask-list" id="mask-list"></div>
         <button class="btn btn-danger" id="btn-remove-masks" style="display:none" onclick="removeMasks()">
-            Supprimer tous les masques
+            Remove all masks
         </button>
     </div>
 
@@ -659,7 +659,7 @@
 
     <!-- STEP 2: Annotation -->
     <div class="card step-annotate">
-        <div class="card-title">02 — Sélection du sujet</div>
+        <div class="card-title">02 — Subject selection</div>
 
         <!-- Controls -->
         <div class="controls-row" id="annotation-controls" style="display:none">
@@ -669,15 +669,15 @@
                 <span class="frame-num" id="frame-num-label">1 / —</span>
             </div>
             <div class="toggle-group">
-                <button class="toggle-btn active" id="btn-positive" onclick="setMode(true)">+ Positif</button>
-                <button class="toggle-btn" id="btn-negative" onclick="setMode(false)">− Négatif</button>
+                <button class="toggle-btn active" id="btn-positive" onclick="setMode(true)">+ Positive</button>
+                <button class="toggle-btn" id="btn-negative" onclick="setMode(false)">− Negative</button>
             </div>
         </div>
 
         <!-- Frame display -->
         <div id="canvas-container">
             <div class="canvas-placeholder" id="canvas-placeholder">
-                <span class="placeholder-text">Chargez une vidéo</span>
+                <span class="placeholder-text">Load a video</span>
             </div>
             <div class="canvas-wrap" id="canvas-wrap" style="display:none">
                 <img id="frame-img" src="" alt="Frame">
@@ -692,7 +692,7 @@
 
     <!-- STEP 3: Run -->
     <div class="card step-run">
-        <div class="card-title">03 — Traitement</div>
+        <div class="card-title">03 — Processing</div>
 
         <div class="param-group">
             <div class="param-label">
@@ -714,14 +714,21 @@
 
         <div class="param-group">
             <div class="param-label">
-                <span>Mémoire de travail</span>
+                <span>Working memory</span>
             </div>
             <select id="mem-frames-select" onchange="selectedMemFrames=parseInt(this.value)"
                     style="width:100%;background:#111;color:#ccc;border:1px solid #333;border-radius:4px;padding:6px 8px;font-size:11px;font-family:inherit;outline:none;cursor:pointer;letter-spacing:.5px">
-                <option value="2">2 frames — rapide</option>
-                <option value="5" selected>5 frames — équilibré</option>
-                <option value="10">10 frames — précis</option>
+                <option value="2">2 frames — fast</option>
+                <option value="5" selected>5 frames — balanced</option>
+                <option value="10">10 frames — precise</option>
             </select>
+        </div>
+
+        <div class="param-group" style="margin-top:12px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:10px;letter-spacing:.5px;color:#aaa;text-transform:uppercase">
+                <input type="checkbox" id="split-masks-check" style="accent-color:#e87c1e;width:14px;height:14px;cursor:pointer">
+                Output per mask
+            </label>
         </div>
 
         <hr class="divider">
@@ -736,17 +743,17 @@
             <!-- Single mode actions -->
             <div id="single-run-actions" style="margin-top:20px">
                 <button class="btn btn-primary" id="btn-run" disabled onclick="runMatting()">
-                    Lancer le matting
+                    Run matting
                 </button>
             </div>
 
             <!-- Batch mode actions -->
             <div id="batch-run-actions" style="display:none; margin-top:20px">
                 <button class="btn btn-secondary" id="btn-add-batch" disabled onclick="addToBatch()">
-                    + Ajouter au batch
+                    + Add to batch
                 </button>
                 <button class="btn btn-primary" id="btn-run-batch" disabled onclick="runBatch()">
-                    Lancer le batch
+                    Run batch
                 </button>
             </div>
         </div>
@@ -759,55 +766,55 @@
 <div id="panel-settings" style="display:none; max-width:700px; margin:32px auto; padding:0 24px 40px;">
 
     <div class="card" style="margin-bottom:20px">
-        <div class="card-title">Dossier d'entrée (uploads)</div>
+        <div class="card-title">Input folder (uploads)</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
-            <input id="input-uploads-dir" type="text" placeholder="/chemin/vers/uploads"
+            <input id="input-uploads-dir" type="text" placeholder="/path/to/uploads"
                 style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
                        border-radius:6px;color:#fff;padding:8px 12px;font-size:12px;font-family:inherit">
             <button class="btn btn-primary" style="margin:0;width:auto;padding:8px 16px;white-space:nowrap"
-                onclick="saveSettings()">Valider</button>
+                onclick="saveSettings()">Apply</button>
         </div>
         <div id="uploads-dir-status" style="font-size:10px;color:#555;margin-top:6px;letter-spacing:1px"></div>
     </div>
 
     <div class="card" style="margin-bottom:20px">
-        <div class="card-title">Dossier de sortie (résultats)</div>
+        <div class="card-title">Output folder (results)</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
-            <input id="input-results-dir" type="text" placeholder="/chemin/vers/results"
+            <input id="input-results-dir" type="text" placeholder="/path/to/results"
                 style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
                        border-radius:6px;color:#fff;padding:8px 12px;font-size:12px;font-family:inherit">
             <button class="btn btn-primary" style="margin:0;width:auto;padding:8px 16px;white-space:nowrap"
-                onclick="saveSettings()">Valider</button>
+                onclick="saveSettings()">Apply</button>
         </div>
         <div id="results-dir-status" style="font-size:10px;color:#555;margin-top:6px;letter-spacing:1px"></div>
     </div>
 
     <div class="card">
-        <div class="card-title">Purger les fichiers</div>
+        <div class="card-title">Purge files</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
 
             <!-- Uploads purge -->
             <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:16px">
-                <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#555;margin-bottom:12px">Entrées</div>
+                <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#555;margin-bottom:12px">Inputs</div>
                 <div style="display:flex;gap:6px;margin-bottom:12px">
-                    <button class="purge-period-btn active" data-target="uploads" data-period="today" onclick="selectPurgePeriod(this)">Aujourd'hui</button>
-                    <button class="purge-period-btn" data-target="uploads" data-period="week" onclick="selectPurgePeriod(this)">Cette semaine</button>
-                    <button class="purge-period-btn" data-target="uploads" data-period="all" onclick="selectPurgePeriod(this)">Tout</button>
+                    <button class="purge-period-btn active" data-target="uploads" data-period="today" onclick="selectPurgePeriod(this)">Today</button>
+                    <button class="purge-period-btn" data-target="uploads" data-period="week" onclick="selectPurgePeriod(this)">This week</button>
+                    <button class="purge-period-btn" data-target="uploads" data-period="all" onclick="selectPurgePeriod(this)">All</button>
                 </div>
                 <div id="purge-uploads-preview" style="font-size:10px;color:#555;min-height:16px;margin-bottom:10px"></div>
-                <button class="btn btn-danger" style="margin:0;width:100%;padding:8px" onclick="doPurge('uploads')">Purger</button>
+                <button class="btn btn-danger" style="margin:0;width:100%;padding:8px" onclick="doPurge('uploads')">Purge</button>
             </div>
 
             <!-- Results purge -->
             <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:16px">
-                <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#555;margin-bottom:12px">Résultats</div>
+                <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#555;margin-bottom:12px">Results</div>
                 <div style="display:flex;gap:6px;margin-bottom:12px">
-                    <button class="purge-period-btn active" data-target="results" data-period="today" onclick="selectPurgePeriod(this)">Aujourd'hui</button>
-                    <button class="purge-period-btn" data-target="results" data-period="week" onclick="selectPurgePeriod(this)">Cette semaine</button>
-                    <button class="purge-period-btn" data-target="results" data-period="all" onclick="selectPurgePeriod(this)">Tout</button>
+                    <button class="purge-period-btn active" data-target="results" data-period="today" onclick="selectPurgePeriod(this)">Today</button>
+                    <button class="purge-period-btn" data-target="results" data-period="week" onclick="selectPurgePeriod(this)">This week</button>
+                    <button class="purge-period-btn" data-target="results" data-period="all" onclick="selectPurgePeriod(this)">All</button>
                 </div>
                 <div id="purge-results-preview" style="font-size:10px;color:#555;min-height:16px;margin-bottom:10px"></div>
-                <button class="btn btn-danger" style="margin:0;width:100%;padding:8px" onclick="doPurge('results')">Purger</button>
+                <button class="btn btn-danger" style="margin:0;width:100%;padding:8px" onclick="doPurge('results')">Purge</button>
             </div>
 
         </div>
@@ -818,10 +825,10 @@
 <div id="batch-result-section">
     <hr class="divider" style="margin-bottom:24px">
     <div class="batch-results-header">
-        <span class="batch-results-title">Résultats du batch</span>
+        <span class="batch-results-title">Batch results</span>
         <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn-flame" style="width:auto;padding:8px 20px;display:inline-flex;align-items:center;margin:0" onclick="sendAllToFlame()">⬥ Tout envoyer vers Flame</button>
-            <button class="btn-download" style="width:auto;padding:8px 20px;margin:0" onclick="downloadAllBatch()">⬇ Tout télécharger</button>
+            <button class="btn-flame" style="width:auto;padding:8px 20px;display:inline-flex;align-items:center;margin:0" onclick="sendAllToFlame()">⬥ Send all to Flame</button>
+            <button class="btn-download" style="width:auto;padding:8px 20px;margin:0" onclick="downloadAllBatch()">⬇ Download all</button>
         </div>
     </div>
     <div id="batch-results-grid"></div>
@@ -830,22 +837,11 @@
 <!-- Results — full width below everything -->
 <div class="result-section" id="result-section" style="max-width:1200px; margin:0 auto; padding:0 24px 40px;">
     <hr class="divider" id="result-divider">
-    <div class="result-row">
-        <div class="result-col">
-            <div class="result-label">Foreground</div>
-            <video class="result-video" id="result-fg" controls></video>
-            <button class="btn-download" id="dl-fg" onclick="">⬇ Télécharger Foreground</button>
-        </div>
-        <div class="result-col">
-            <div class="result-label">Alpha Matte</div>
-            <video class="result-video" id="result-alpha" controls></video>
-            <button class="btn-download" id="dl-alpha" onclick="">⬇ Télécharger Alpha</button>
-        </div>
-    </div>
+    <div id="results-container"></div>
     <!-- Envoyer vers Flame -->
     <div style="max-width:400px; margin:16px auto 0;">
         <button class="btn-flame" id="btn-send-to-flame" style="display:none" onclick="sendToFlame()">
-            ⬥ Envoyer vers Flame
+            ⬥ Send to Flame
         </button>
         <div class="status-msg" id="flame-send-status" style="margin-top:6px"></div>
     </div>
@@ -945,24 +941,24 @@ async function refreshPurgePreview(target) {
     const d = await r.json();
     const mb = (d.freed_bytes / 1024 / 1024).toFixed(1);
     document.getElementById(`purge-${target}-preview`).textContent =
-        d.deleted > 0 ? `${d.deleted} fichier${d.deleted > 1 ? 's' : ''} · ${mb} Mo` : 'Aucun fichier à purger';
+        d.deleted > 0 ? `${d.deleted} file${d.deleted > 1 ? 's' : ''} · ${mb} MB` : 'No files to purge';
 }
 
 async function doPurge(target) {
     const period = _purgePeriods[target] || 'today';
-    const label = { today: "aujourd'hui", week: 'cette semaine', all: 'tout' }[period];
-    if (!confirm(`Supprimer les fichiers ${target === 'uploads' ? "d'entrée" : 'de résultats'} — ${label} ?`)) return;
+    const label = { today: 'today', week: 'this week', all: 'all time' }[period];
+    if (!confirm(`Delete ${target === 'uploads' ? 'input' : 'result'} files — ${label}?`)) return;
     const r = await fetch('/purge', {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ target, period, dry_run: false })
     });
     const d = await r.json();
-    showToast(`${d.deleted} fichier${d.deleted > 1 ? 's' : ''} supprimé${d.deleted > 1 ? 's' : ''}`);
+    showToast(`${d.deleted} file${d.deleted > 1 ? 's' : ''} deleted`);
     refreshPurgePreview(target);
 }
 
 async function resetAll() {
-    if (!confirm('Réinitialiser complètement ? Toutes les vidéos et masques seront effacés.')) return;
+    if (!confirm('Reset everything? All videos and masks will be cleared.')) return;
 
     // Stop any running poll
     if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
@@ -1069,9 +1065,9 @@ async function uploadFile(file) {
         // Update video info
         document.getElementById('info-name').textContent = '↳ ' + data.video_name;
         document.getElementById('info-fps').textContent = 'FPS : ' + Math.round(data.fps);
-        document.getElementById('info-frames').textContent = 'Frames : ' + data.total_frames;
-        const resizeLabel = selectedResolution !== 'original' ? ' (redimensionné)' : '';
-        document.getElementById('info-size').textContent = 'Résolution : ' + data.image_w + '×' + data.image_h + resizeLabel;
+        document.getElementById('info-frames').textContent = 'Frames: ' + data.total_frames;
+        const resizeLabel = selectedResolution !== 'original' ? ' (resized)' : '';
+        document.getElementById('info-size').textContent = 'Resolution: ' + data.image_w + '×' + data.image_h + resizeLabel;
         document.getElementById('video-info').style.display = 'block';
 
         // Setup frame slider
@@ -1092,9 +1088,9 @@ async function uploadFile(file) {
         document.getElementById('btn-add-batch').disabled = false;
         if (currentMode === 'single') document.getElementById('btn-restart').style.display = 'block';
 
-        setUploadStatus('Prêt — cliquez sur la frame pour sélectionner le sujet.', '');
+        setUploadStatus('Ready — click on the frame to select the subject.', '');
     } catch(e) {
-        setUploadStatus('Erreur : ' + e.message, 'error');
+        setUploadStatus('Error: ' + e.message, 'error');
     } finally {
         dropZone.classList.remove('loading');
     }
@@ -1243,7 +1239,7 @@ async function runMatting() {
     if (!sessionId) return;
     const btn = document.getElementById('btn-run');
     btn.disabled = true;
-    setRunStatus('Démarrage…', '');
+    setRunStatus('Starting…', '');
     showProgress(0);
 
     const res = await fetch('/run', {
@@ -1255,11 +1251,12 @@ async function runMatting() {
             dilate: parseInt(document.getElementById('dilate-slider').value),
             selected_masks: selectedMasks,
             max_mem_frames: selectedMemFrames,
+            split_masks: document.getElementById('split-masks-check').checked,
         })
     });
     const data = await res.json();
     if (!data.job_id) {
-        setRunStatus('Erreur au démarrage.', 'error');
+        setRunStatus('Startup error.', 'error');
         btn.disabled = false;
         return;
     }
@@ -1279,55 +1276,80 @@ function pollJob(jobId, btn) {
             const frame = data.frame || 0;
             const total = data.total || 0;
             let detail = '';
-            if (phase === 'backward' && total > 0) detail = `◀ Backward — ${frame} / ${total} frames`;
-            else if (phase === 'warmup' && total > 0) detail = `Warmup — ${frame} / ${total} frames`;
-            else if (phase === 'inference' && total > 0) detail = `▶ Forward — ${frame} / ${total} frames`;
-            setRunStatus(`Traitement en cours… ${pct}%`, '');
+            if (data.current_mask) detail = `${data.current_mask} — `;
+            if (phase === 'backward' && total > 0) detail += `◀ Backward — ${frame} / ${total} frames`;
+            else if (phase === 'warmup' && total > 0) detail += `Warmup — ${frame} / ${total} frames`;
+            else if (phase === 'inference' && total > 0) detail += `▶ Forward — ${frame} / ${total} frames`;
+            setRunStatus(`Processing… ${pct}%`, '');
             const det = document.getElementById('progress-detail');
             if (detail) { det.textContent = detail; det.style.display = 'block'; }
             else { det.style.display = 'none'; }
         } else if (data.status === 'done') {
             clearInterval(pollInterval);
             showProgress(100);
-            setRunStatus('Terminé !', 'success');
+            setRunStatus('Done!', 'success');
             btn.disabled = false;
-            showResults(data.fg, data.alpha, jobId);
+            if (data.results) {
+                showResultsMulti(data.results, jobId);
+            } else {
+                showResults(data.fg, data.alpha, jobId);
+            }
         } else if (data.status === 'error') {
             clearInterval(pollInterval);
             hideProgress();
-            setRunStatus('Erreur : ' + data.error, 'error');
+            setRunStatus('Error: ' + data.error, 'error');
             btn.disabled = false;
             console.error(data.trace);
         }
     }, 1000);
 }
 
-function showResults(fg, alpha, jobId) {
-    document.getElementById('result-section').style.display = 'block';
-    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    const fgUrl = '/result/' + fg;
-    const alUrl = '/result/' + alpha;
-
-    document.getElementById('result-fg').src = fgUrl;
-    document.getElementById('result-alpha').src = alUrl;
-
+function buildResultRow(fg, alpha, label) {
     const base = currentVideoName.replace(/\.[^.]+$/, '');
-    const dlFg = document.getElementById('dl-fg');
-    dlFg.onclick = () => downloadResult(fg, base + '_fg.mp4');
+    const suffix = label ? `_${label}` : '';
+    return `
+    <div style="margin-bottom:24px">
+        ${label ? `<div style="font-size:11px;letter-spacing:1px;color:#888;text-transform:uppercase;margin-bottom:10px">${label}</div>` : ''}
+        <div class="result-row">
+            <div class="result-col">
+                <div class="result-label">Foreground</div>
+                <video class="result-video" src="/result/${fg}" controls></video>
+                <button class="btn-download" onclick="downloadResult('${fg}','${base}${suffix}_fg.mp4')">⬇ Download Foreground</button>
+            </div>
+            <div class="result-col">
+                <div class="result-label">Alpha Matte</div>
+                <video class="result-video" src="/result/${alpha}" controls></video>
+                <button class="btn-download" onclick="downloadResult('${alpha}','${base}${suffix}_alpha.mp4')">⬇ Download Alpha</button>
+            </div>
+        </div>
+    </div>`;
+}
 
-    const dlAl = document.getElementById('dl-alpha');
-    dlAl.onclick = () => downloadResult(alpha, base + '_alpha.mp4');
+function showResults(fg, alpha, jobId) {
+    const section = document.getElementById('result-section');
+    section.style.display = 'block';
+    document.getElementById('results-container').innerHTML = buildResultRow(fg, alpha, '');
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    // Activer le bouton Send to Flame
     currentJobId = jobId;
     const flameBtn = document.getElementById('btn-send-to-flame');
-    if (flameBtn) {
-        flameBtn.style.display = 'block';
-        flameBtn.disabled = false;
-    }
+    if (flameBtn) { flameBtn.style.display = 'block'; flameBtn.disabled = false; }
     document.getElementById('flame-send-status').textContent = '';
     document.getElementById('flame-send-status').className = 'status-msg';
+}
+
+function showResultsMulti(results, jobId) {
+    const section = document.getElementById('result-section');
+    section.style.display = 'block';
+    document.getElementById('results-container').innerHTML = results.map(r =>
+        buildResultRow(r.fg, r.alpha, r.mask_name)
+    ).join('');
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    currentJobId = jobId;
+    const flameBtn = document.getElementById('btn-send-to-flame');
+    if (flameBtn) flameBtn.style.display = 'none';
+    document.getElementById('flame-send-status').textContent = '';
 }
 
 // ── Restart ─────────────────────────────────────────────────────────────────
@@ -1470,7 +1492,7 @@ async function _loadBatchVideoIntoCanvas(v, index) {
         document.getElementById('btn-add-batch').disabled = false;
         document.getElementById('btn-run').disabled = false;
     } catch(e) {
-        console.error('[Batch] Erreur chargement vidéo:', e.message);
+        console.error('[Batch] Error loading video:', e.message);
         // Show error state in the list
         if (batchVideos[index]) batchVideos[index]._loadError = e.message;
         renderBatchVideoList();
@@ -1509,30 +1531,55 @@ function showToast(msg, isError = false) {
 function renderBatchResults() {
     const section = document.getElementById('batch-result-section');
     const grid = document.getElementById('batch-results-grid');
-    const done = batchVideos.filter(v => v.status === 'done' && v.fg);
+    const done = batchVideos.filter(v => v.status === 'done' && (v.fg || v.results));
     if (done.length === 0) { section.style.display = 'none'; return; }
     section.style.display = 'block';
     grid.innerHTML = done.map((v, i) => {
         const baseName = v.video_name.replace(/\.[^.]+$/, '');
         const divider = i > 0 ? '<hr class="divider">' : '';
         const batchFlameClip = v.flame_clip_name || baseName;
+
+        let resultRows = '';
+        if (v.results) {
+            // Split per mask
+            resultRows = v.results.map(r => `
+                <div style="margin-bottom:16px">
+                    <div style="font-size:9px;letter-spacing:1px;color:#666;text-transform:uppercase;margin-bottom:8px">${r.mask_name}</div>
+                    <div class="result-row">
+                        <div class="result-col">
+                            <div class="result-label">Foreground</div>
+                            <video class="result-video" src="/result/${r.fg}" controls></video>
+                            <button class="batch-result-dl" onclick="downloadResult('${r.fg}', '${baseName}_${r.mask_name}_fg.mp4')">⬇ Download Foreground</button>
+                        </div>
+                        <div class="result-col">
+                            <div class="result-label">Alpha Matte</div>
+                            <video class="result-video" src="/result/${r.alpha}" controls></video>
+                            <button class="batch-result-dl" onclick="downloadResult('${r.alpha}', '${baseName}_${r.mask_name}_alpha.mp4')">⬇ Download Alpha</button>
+                        </div>
+                    </div>
+                </div>`).join('');
+        } else {
+            resultRows = `
+                <div class="result-row">
+                    <div class="result-col">
+                        <div class="result-label">Foreground</div>
+                        <video class="result-video" src="/result/${v.fg}" controls></video>
+                        <button class="batch-result-dl" onclick="downloadResult('${v.fg}', '${baseName}_fg.mp4')">⬇ Download Foreground</button>
+                    </div>
+                    <div class="result-col">
+                        <div class="result-label">Alpha Matte</div>
+                        <video class="result-video" src="/result/${v.alpha}" controls></video>
+                        <button class="batch-result-dl" onclick="downloadResult('${v.alpha}', '${baseName}_alpha.mp4')">⬇ Download Alpha</button>
+                    </div>
+                </div>`;
+        }
+
         return `${divider}
         <div class="batch-result-item">
             <div class="batch-result-item-title">${v.video_name}</div>
-            <div class="result-row">
-                <div class="result-col">
-                    <div class="result-label">Foreground</div>
-                    <video class="result-video" src="/result/${v.fg}" controls></video>
-                    <button class="batch-result-dl" onclick="downloadResult('${v.fg}', '${baseName}_fg.mp4')">⬇ Télécharger Foreground</button>
-                </div>
-                <div class="result-col">
-                    <div class="result-label">Alpha Matte</div>
-                    <video class="result-video" src="/result/${v.alpha}" controls></video>
-                    <button class="batch-result-dl" onclick="downloadResult('${v.alpha}', '${baseName}_alpha.mp4')">⬇ Télécharger Alpha</button>
-                </div>
-            </div>
+            ${resultRows}
             <button class="batch-result-flame" onclick="sendBatchResultToFlame('${v.session_id}', '${v.job_id}', '${batchFlameClip}', this)">
-                ⬥ Envoyer vers Flame
+                ⬥ Send to Flame
             </button>
             <div class="status-msg" id="flame-batch-status-${v.job_id}" style="margin-top:4px"></div>
         </div>`;
@@ -1550,7 +1597,7 @@ async function downloadAllBatch() {
 
 async function sendAllToFlame() {
     const done = batchVideos.filter(v => v.status === 'done' && v.session_id && v.job_id);
-    if (done.length === 0) { showToast('Aucun résultat prêt à envoyer'); return; }
+    if (done.length === 0) { showToast('No results ready to send'); return; }
     for (const v of done) {
         const clipName = v.flame_clip_name || v.video_name.replace(/\.[^.]+$/, '');
         // Find the matching button in the DOM (if rendered) to disable it
@@ -1567,7 +1614,7 @@ function renderBatchVideoList() {
     if (runBatchBtn) runBatchBtn.disabled = !hasQueued;
 
     if (batchVideos.length === 0) {
-        list.innerHTML = '<div style="font-size:9px;color:#333;letter-spacing:1px;text-align:center;padding:20px 0">Aucune vidéo</div>';
+        list.innerHTML = '<div style="font-size:9px;color:#333;letter-spacing:1px;text-align:center;padding:20px 0">No video</div>';
         return;
     }
     list.innerHTML = '';
@@ -1577,8 +1624,8 @@ function renderBatchVideoList() {
         const item = document.createElement('div');
         item.className = 'batch-video-item' + (i === batchActiveIndex ? ' active' : '');
         const statusLabel = {
-            uploading: 'Chargement…', uploaded: 'Chargé', masked: 'Masqué',
-            queued: 'Prêt', running: 'Traitement…', done: 'Terminé', error: 'Erreur',
+            uploading: 'Loading…', uploaded: 'Loaded', masked: 'Masked',
+            queued: 'Ready', running: 'Processing…', done: 'Done', error: 'Error',
         }[v.status] || v.status;
         const pct = v.progress || 0;
         const progressHTML = v.status === 'running' ? `
@@ -1592,7 +1639,7 @@ function renderBatchVideoList() {
                 ${progressHTML}
             </div>
             <span class="batch-video-status" title="${v._loadError || ''}">${v._loadError ? '⚠ ' : ''}${statusLabel}</span>
-            ${!isBatchRunning && v.status !== 'running' ? `<button class="batch-video-remove" onclick="removeBatchVideo(${i})" title="Retirer">×</button>` : ''}
+            ${!isBatchRunning && v.status !== 'running' ? `<button class="batch-video-remove" onclick="removeBatchVideo(${i})" title="Remove">×</button>` : ''}
         `;
         if (v.status !== 'uploading' && v.status !== 'error') {
             item.addEventListener('click', (e) => {
@@ -1604,7 +1651,7 @@ function renderBatchVideoList() {
     });
 }
 
-// ── Flame: envoyer résultats single ─────────────────────────────────────────
+// ── Flame: send single results ───────────────────────────────────────────────
 
 async function sendToFlame() {
     if (!currentJobId || !sessionId) return;
@@ -1628,18 +1675,18 @@ async function sendToFlame() {
             })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Export échoué');
-        statusEl.textContent = `✓ ${data.frame_count} frames envoyées vers Flame`;
+        if (!res.ok) throw new Error(data.detail || 'Export failed');
+        statusEl.textContent = `✓ ${data.frame_count} frames sent to Flame`;
         statusEl.className = 'status-msg success';
-        showToast(`Alpha envoyé vers Flame (${data.frame_count} frames)`);
+        showToast(`Alpha sent to Flame (${data.frame_count} frames)`);
     } catch(e) {
-        statusEl.textContent = 'Erreur : ' + e.message;
+        statusEl.textContent = 'Error: ' + e.message;
         statusEl.className = 'status-msg error';
         btn.disabled = false;
     }
 }
 
-// ── Flame: envoyer résultats batch ───────────────────────────────────────────
+// ── Flame: send batch results ────────────────────────────────────────────────
 
 async function sendBatchResultToFlame(sessId, jobId, clipName, btnEl) {
     if (btnEl) btnEl.disabled = true;
@@ -1659,8 +1706,8 @@ async function sendBatchResultToFlame(sessId, jobId, clipName, btnEl) {
             })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Export échoué');
-        if (statusEl) { statusEl.textContent = `✓ ${data.frame_count} frames envoyées`; statusEl.className = 'status-msg success'; }
+        if (!res.ok) throw new Error(data.detail || 'Export failed');
+        if (statusEl) { statusEl.textContent = `✓ ${data.frame_count} frames sent`; statusEl.className = 'status-msg success'; }
         showToast(`${clipName} → Flame (${data.frame_count} frames)`);
     } catch(e) {
         if (statusEl) { statusEl.textContent = 'Erreur : ' + e.message; statusEl.className = 'status-msg error'; }
@@ -1693,15 +1740,15 @@ async function _pollFlameQueue() {
                 total_frames:    item.total_frames,
                 fps:             item.fps,
             });
-            showToast(`Flame → « ${item.clip_name} » ajouté au batch`);
+            showToast(`Flame → "${item.clip_name}" added to batch`);
         }
         renderBatchVideoList();
 
-        // Sélectionner automatiquement le premier clip non annoté
+        // Auto-select the first unannotated clip
         const firstNew = batchVideos.findIndex(v => v.status === 'uploaded' && v.from_flame);
         if (firstNew >= 0) selectBatchVideo(firstNew);
 
-    } catch(e) { /* serveur non prêt, ignorer */ }
+    } catch(e) { /* server not ready, ignore */ }
 }
 
 function _showFlameNotif(clipName, sessId, videoName) {
@@ -1732,8 +1779,8 @@ async function _loadFlameSession(sessId, videoName, clipName, notifEl) {
 
         document.getElementById('info-name').textContent   = '↳ ' + videoName + ' [Flame]';
         document.getElementById('info-fps').textContent    = 'FPS : ' + Math.round(data.fps);
-        document.getElementById('info-frames').textContent = 'Frames : ' + data.total_frames;
-        document.getElementById('info-size').textContent   = 'Résolution : ' + data.image_w + '×' + data.image_h;
+        document.getElementById('info-frames').textContent = 'Frames: ' + data.total_frames;
+        document.getElementById('info-size').textContent   = 'Resolution: ' + data.image_w + '×' + data.image_h;
         document.getElementById('video-info').style.display = 'block';
 
         const slider = document.getElementById('frame-slider');
@@ -1749,13 +1796,13 @@ async function _loadFlameSession(sessId, videoName, clipName, notifEl) {
 
         showFrame(data.frame);
         renderMaskList(data.mask_names || []);
-        setUploadStatus('Clip Flame chargé — cliquez pour créer le masque.', '');
+        setUploadStatus('Flame clip loaded — click to create the mask.', '');
     } catch(e) {
-        showToast('Erreur chargement Flame : ' + e.message, true);
+        showToast('Flame load error: ' + e.message, true);
     }
 }
 
-// Démarrer le polling de la file Flame (3 secondes)
+// Start polling the Flame queue (every 3 seconds)
 setInterval(_pollFlameQueue, 3000);
 
 function removeBatchVideo(index) {
@@ -1794,12 +1841,14 @@ async function runBatch() {
     const runBatchBtn2 = document.getElementById('btn-run-batch');
     if (runBatchBtn2) runBatchBtn2.disabled = true;
 
+    const splitMasks = document.getElementById('split-masks-check').checked;
     const items = queued.map(v => ({
         session_id: v.session_id,
         selected_masks: v.selected_masks,
         erode: v.erode,
         dilate: v.dilate,
         max_mem_frames: v.max_mem_frames,
+        split_masks: splitMasks,
     }));
 
     const res = await fetch('/batch-run', {
@@ -1821,7 +1870,7 @@ async function runBatch() {
         let allDone = true;
         queued.forEach(v => {
             const job = d.jobs[v.job_id] || {};
-            if (job.status === 'done') { v.status = 'done'; v.fg = job.fg; v.alpha = job.alpha; v.progress = 100; }
+            if (job.status === 'done') { v.status = 'done'; v.fg = job.fg; v.alpha = job.alpha; v.results = job.results || null; v.progress = 100; }
             else if (job.status === 'error') { v.status = 'error'; }
             else { allDone = false; v.status = 'running'; v.progress = job.progress || 0; v.phase = job.phase || ''; v.frame = job.frame || 0; v.total = job.total || 0; }
         });
