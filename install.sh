@@ -34,6 +34,10 @@ fi
 # ── 3. Activate venv ────────────────────────────────────────
 source "$VENV_DIR/bin/activate"
 
+# ── 3b. Upgrade pip ─────────────────────────────────────────
+echo "→  Upgrading pip..."
+pip install --upgrade pip
+
 # ── 4. Install PyTorch ──────────────────────────────────────
 if [[ "$(uname)" == "Darwin" ]]; then
     echo "→  macOS detected — installing PyTorch (MPS)..."
@@ -45,7 +49,7 @@ fi
 
 # ── 5. Install matanyone2 package ───────────────────────────
 echo "→  Installing matanyone2 package..."
-pip install -e . --no-deps
+pip install -e . --no-deps || echo "⚠️  matanyone2 editable install skipped (pyproject only) — continuing..."
 
 # ── 6. Install Python dependencies ──────────────────────────
 echo "→  Installing Python dependencies..."
