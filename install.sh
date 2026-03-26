@@ -59,11 +59,13 @@ pip install -r hugging_face/requirements.txt
 echo "→  Downloading model weights..."
 python3 - <<'EOF'
 from huggingface_hub import hf_hub_download
+from basicsr.utils.download_util import load_file_from_url
 import os
 
 models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pretrained_models")
 os.makedirs(models_dir, exist_ok=True)
 
+# MatAnyone model
 files = [
     ("hkchengrex/MatAnyone", "matanyone.pth"),
 ]
@@ -75,6 +77,16 @@ for repo, filename in files:
         print(f"  ↓ Downloading {filename}...")
         hf_hub_download(repo_id=repo, filename=filename, local_dir=models_dir)
         print(f"  ✓ {filename} done")
+
+# SAM model (~2.5 GB)
+sam_url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
+sam_dest = os.path.join(models_dir, "sam_vit_h_4b8939.pth")
+if os.path.exists(sam_dest):
+    print(f"  ✓ sam_vit_h_4b8939.pth already downloaded")
+else:
+    print(f"  ↓ Downloading SAM model (~2.5 GB)...")
+    load_file_from_url(sam_url, models_dir)
+    print(f"  ✓ SAM done")
 EOF
 
 echo ""
