@@ -1,13 +1,12 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────
 #  Flamatanyone — Install Script
-#  Tested on macOS (Apple Silicon) with conda/miniconda
+#  Requires: Python 3.10+
 # ─────────────────────────────────────────────────────────────
 
 set -e
 
-CONDA_ENV="flamatanyone"
-PYTHON_VERSION="3.11"
+VENV_DIR="$(dirname "$0")/.venv"
 
 echo ""
 echo "╔══════════════════════════════════════╗"
@@ -15,26 +14,27 @@ echo "║         Flamatanyone — Install       ║"
 echo "╚══════════════════════════════════════╝"
 echo ""
 
-# ── 1. Check conda ──────────────────────────────────────────
-if ! command -v conda &> /dev/null; then
-    echo "❌  conda not found. Install Miniconda first:"
-    echo "    https://docs.conda.io/en/latest/miniconda.html"
+# ── 1. Check Python ─────────────────────────────────────────
+if ! command -v python3 &> /dev/null; then
+    echo "❌  python3 not found. Install Python 3.10+ from https://www.python.org"
     exit 1
 fi
 
-# ── 2. Create env if needed ─────────────────────────────────
-if conda env list | grep -q "^$CONDA_ENV "; then
-    echo "✓  Conda env '$CONDA_ENV' already exists, skipping creation."
+PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+echo "✓  Python $PYTHON_VERSION found"
+
+# ── 2. Create venv if needed ────────────────────────────────
+if [ -d "$VENV_DIR" ]; then
+    echo "✓  Virtual env already exists, skipping creation."
 else
-    echo "→  Creating conda env '$CONDA_ENV' (Python $PYTHON_VERSION)..."
-    conda create -y -n "$CONDA_ENV" python="$PYTHON_VERSION"
+    echo "→  Creating virtual env..."
+    python3 -m venv "$VENV_DIR"
 fi
 
-# ── 3. Activate env ─────────────────────────────────────────
-eval "$(conda shell.bash hook)"
-conda activate "$CONDA_ENV"
+# ── 3. Activate venv ────────────────────────────────────────
+source "$VENV_DIR/bin/activate"
 
-# ── 4. Install PyTorch (MPS for Apple Silicon, CUDA for Linux) ──
+# ── 4. Install PyTorch ──────────────────────────────────────
 if [[ "$(uname)" == "Darwin" ]]; then
     echo "→  macOS detected — installing PyTorch (MPS)..."
     pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
@@ -47,13 +47,13 @@ fi
 echo "→  Installing matanyone2 package..."
 pip install -e . --no-deps
 
-# ── 6. Install Python dependencies ─────────────────────────
+# ── 6. Install Python dependencies ──────────────────────────
 echo "→  Installing Python dependencies..."
 pip install -r hugging_face/requirements.txt
 
 # ── 7. Download model weights ───────────────────────────────
 echo "→  Downloading model weights..."
-python - <<'EOF'
+python3 - <<'EOF'
 from huggingface_hub import hf_hub_download
 import os
 
